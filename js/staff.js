@@ -41,11 +41,9 @@ async function loadStaffDashboard() {
         const performance = data.performance_percent || 0;
         const status = data.performance_status;
 
-        // ---------- HEADER ----------
         document.getElementById("staffName").innerText = username;
         document.getElementById("sbuName").innerText = sbu.name;
 
-        // ---------- KPI ----------
         document.getElementById("dailyBudget").innerText =
             sbu.daily_budget.toLocaleString();
 
@@ -61,20 +59,20 @@ async function loadStaffDashboard() {
         document.getElementById("performance").innerText =
             performance + "%";
 
-        // ---------- PERFORMANCE STATUS (FIXED CASE ISSUE) ----------
         const performanceEl = document.getElementById("performanceStatus");
-        performanceEl.innerText = status;
-        performanceEl.className = "status-pill";
+        if (performanceEl) {
+            performanceEl.innerText = status;
+            performanceEl.className = "status-pill";
 
-        if (status === "Excellent") {
-            performanceEl.classList.add("status-good");
-        } else if (status === "warning") {
-            performanceEl.classList.add("status-warn");
-        } else {
-            performanceEl.classList.add("status-bad");
+            if (status === "Excellent") {
+                performanceEl.classList.add("status-good");
+            } else if (status === "warning") {
+                performanceEl.classList.add("status-warn");
+            } else {
+                performanceEl.classList.add("status-bad");
+            }
         }
 
-        // ---------- FIXED COSTS ----------
         document.getElementById("personnel").innerText =
             (fixed.personnel_cost || 0).toLocaleString();
 
@@ -84,12 +82,14 @@ async function loadStaffDashboard() {
         document.getElementById("electricity").innerText =
             (fixed.electricity || 0).toLocaleString();
 
-        // ---------- VARIABLE COSTS ----------
         document.getElementById("consumables").innerText =
             (variable.consumables || 0).toLocaleString();
 
         document.getElementById("generalExpenses").innerText =
             (variable.general_expenses || 0).toLocaleString();
+
+        document.getElementById("utilities").innerText =
+            (variable.utilities || 0).toLocaleString();
 
         document.getElementById("miscellaneous").innerText =
             (variable.miscellaneous || 0).toLocaleString();
@@ -100,46 +100,14 @@ async function loadStaffDashboard() {
     }
 }
 
-// ---------- SAVE STAFF EXPENSE ----------
-function initExpenseSave() {
-    const btn = document.getElementById("saveExpenseBtn");
+// ---------- SAVE SALES (🔥 THIS WAS MISSING) ----------
+function initSalesSave() {
+    const btn = document.getElementById("saveSalesBtn");
     if (!btn) return;
 
     btn.addEventListener("click", async () => {
-        const category = document.getElementById("expenseCategory").value;
-        const amount = Number(document.getElementById("expenseAmount").value);
-        const date = document.getElementById("expenseDate").value;
-        const notes = document.getElementById("expenseNotes")?.value || "";
+        const amount = Number(document.getElementById("salesInput").value);
+        const date = document.getElementById("salesDate").value;
+        const notes = document.getElementById("salesNotes").value || "";
 
-        if (!amount || amount <= 0) {
-            alert("Enter a valid amount");
-            return;
-        }
-
-        const res = await fetch(`${API_BASE}/staff/expenses`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ category, amount, date, notes })
-        });
-
-        if (!res.ok) {
-            const err = await res.json();
-            alert(err.detail || "Failed to save expense");
-            return;
-        }
-
-        alert("Expense saved successfully");
-        document.getElementById("expenseAmount").value = "";
-
-        loadStaffDashboard();
-    });
-}
-
-// ---------- INIT ----------
-document.addEventListener("DOMContentLoaded", () => {
-    loadStaffDashboard();
-    initExpenseSave();
-});
+        if (!amou
