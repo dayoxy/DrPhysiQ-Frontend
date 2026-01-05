@@ -20,7 +20,7 @@ window.logout = logout;
 // ---------- LOAD DASHBOARD ----------
 async function loadStaffDashboard() {
     try {
-        const res = await fetch("https://drphysiq-inventory.onrender.com", {
+        const res = await fetch("https://drphysiq-inventory-production.up.railway.app", {
             headers: {
                 "Authorization": `Bearer ${token}`
             }
