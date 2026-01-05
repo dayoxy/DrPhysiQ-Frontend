@@ -1,3 +1,4 @@
+// js/staff.js
 console.log("staff.js loaded");
 
 // ---------- AUTH GUARD ----------
@@ -6,7 +7,6 @@ const role = localStorage.getItem("role");
 const username = localStorage.getItem("username");
 
 if (!token || role !== "staff") {
-    alert("Unauthorized access");
     window.location.href = "index.html";
 }
 
@@ -17,17 +17,17 @@ function logout() {
 }
 window.logout = logout;
 
-// ---------- LOAD DASHBOARD ----------
+// ---------- LOAD STAFF DASHBOARD ----------
 async function loadStaffDashboard() {
     try {
-        const res = await fetch("https://drphysiq-inventory-production.up.railway.app", {
+        const res = await fetch(`${API_BASE}/staff/my-sbu`, {
             headers: {
                 "Authorization": `Bearer ${token}`
             }
         });
 
         if (!res.ok) {
-            throw new Error("Failed to load staff SBU");
+            throw new Error("Failed to load staff dashboard");
         }
 
         const data = await res.json();
@@ -35,52 +35,54 @@ async function loadStaffDashboard() {
 
         const sbu = data.sbu;
         const salesToday = data.sales_today || 0;
-
         const fixed = data.fixed_costs || {};
         const variable = data.variable_costs || {};
-
         const netProfit = data.net_profit || 0;
         const performance = data.performance_percent || 0;
         const status = data.performance_status;
 
-        const personnel = fixed.personnel_cost || 0;
-        const rent = fixed.rent || 0;
-        const electricity = fixed.electricity || 0;
-
-        const totalExpenses = data.total_expenses || 0;
-
-        // ---------- UPDATE UI ----------
+        // ---------- HEADER ----------
         document.getElementById("staffName").innerText = username;
         document.getElementById("sbuName").innerText = sbu.name;
 
+        // ---------- KPI ----------
         document.getElementById("dailyBudget").innerText =
             sbu.daily_budget.toLocaleString();
 
         document.getElementById("salesToday").innerText =
             salesToday.toLocaleString();
 
-        // ---------- PERFORMANCE ----------
-        const performanceEl = document.getElementById("performance");
-        performanceEl.innerText = performance + "%";
-        performanceEl.classList.remove("good", "warn", "bad");
+        document.getElementById("totalExpenses").innerText =
+            data.total_expenses.toLocaleString();
 
-        if (status === "excellent") {
-            performanceEl.classList.add("good");
+        document.getElementById("netProfit").innerText =
+            netProfit.toLocaleString();
+
+        document.getElementById("performance").innerText =
+            performance + "%";
+
+        // ---------- PERFORMANCE STATUS (FIXED CASE ISSUE) ----------
+        const performanceEl = document.getElementById("performanceStatus");
+        performanceEl.innerText = status;
+        performanceEl.className = "status-pill";
+
+        if (status === "Excellent") {
+            performanceEl.classList.add("status-good");
         } else if (status === "warning") {
-            performanceEl.classList.add("warn");
+            performanceEl.classList.add("status-warn");
         } else {
-            performanceEl.classList.add("bad");
+            performanceEl.classList.add("status-bad");
         }
 
         // ---------- FIXED COSTS ----------
         document.getElementById("personnel").innerText =
-            personnel.toLocaleString();
+            (fixed.personnel_cost || 0).toLocaleString();
 
         document.getElementById("rent").innerText =
-            rent.toLocaleString();
+            (fixed.rent || 0).toLocaleString();
 
         document.getElementById("electricity").innerText =
-            electricity.toLocaleString();
+            (fixed.electricity || 0).toLocaleString();
 
         // ---------- VARIABLE COSTS ----------
         document.getElementById("consumables").innerText =
@@ -92,50 +94,29 @@ async function loadStaffDashboard() {
         document.getElementById("miscellaneous").innerText =
             (variable.miscellaneous || 0).toLocaleString();
 
-        document.getElementById("totalExpenses").innerText =
-            totalExpenses.toLocaleString();
-
-        document.getElementById("netProfit").innerText =
-            netProfit.toLocaleString();
-
     } catch (err) {
         console.error(err);
         alert("Error loading staff dashboard");
     }
 }
 
-// ---------- SAVE EXPENSE ----------
+// ---------- SAVE STAFF EXPENSE ----------
 function initExpenseSave() {
-    const saveExpenseBtn = document.getElementById("saveExpenseBtn");
-    if (!saveExpenseBtn) return;
+    const btn = document.getElementById("saveExpenseBtn");
+    if (!btn) return;
 
-    saveExpenseBtn.addEventListener("click", async () => {
-        const categoryEl = document.getElementById("expenseCategory");
-        const amountEl = document.getElementById("expenseAmount");
-        const dateEl = document.getElementById("expenseDate");
-        const notesEl = document.getElementById("expenseNotes");
-
-        if (!categoryEl || !amountEl || !dateEl) {
-            alert("Expense inputs missing in HTML");
-            return;
-        }
-
-        const category = categoryEl.value;
-        const amount = Number(amountEl.value);
-        const date = dateEl.value;
-        const notes = notesEl?.value || "";
+    btn.addEventListener("click", async () => {
+        const category = document.getElementById("expenseCategory").value;
+        const amount = Number(document.getElementById("expenseAmount").value);
+        const date = document.getElementById("expenseDate").value;
+        const notes = document.getElementById("expenseNotes")?.value || "";
 
         if (!amount || amount <= 0) {
-            alert("Enter a valid expense amount");
+            alert("Enter a valid amount");
             return;
         }
 
-        if (!date) {
-            alert("Select expense date");
-            return;
-        }
-
-        const res = await fetch("https://drphysiq-inventory-production.up.railway.app", {
+        const res = await fetch(`${API_BASE}/staff/expenses`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -150,12 +131,10 @@ function initExpenseSave() {
             return;
         }
 
-        alert("Expense saved / updated for today");
+        alert("Expense saved successfully");
+        document.getElementById("expenseAmount").value = "";
 
-        amountEl.value = "";
-        if (notesEl) notesEl.value = "";
-
-        await loadStaffDashboard();
+        loadStaffDashboard();
     });
 }
 
