@@ -135,7 +135,7 @@ function initExpenseSave() {
             return;
         }
 
-        const res = await fetch("https://drphysiq-inventory.onrender.com", {
+        const res = await fetch("https://drphysiq-inventory-production.up.railway.app", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
