@@ -152,13 +152,15 @@ async function loadStaff() {
                     ${s.is_active ? "Active" : "Inactive"}
                 </span>
             </td>
-            <td>
+            <td style="display:flex; gap:6px;">
                 ${
                     s.is_active
                         ? `<button class="danger" onclick="deactivateStaff('${s.id}')">Deactivate</button>`
                         : `<button onclick="activateStaff('${s.id}')">Activate</button>`
                 }
+                <button class="subtle" onclick="deleteStaff('${s.id}')">Delete</button>
             </td>
+
         `;
         tbody.appendChild(tr);
     });
