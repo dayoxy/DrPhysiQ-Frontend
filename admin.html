@@ -43,7 +43,7 @@
         <button id="saveStaffBtn">Create Staff</button>
     </section>
 
-    <!-- STAFF LIST -->
+    <!-- STAFF MANAGEMENT -->
     <section class="panel">
         <h3>Staff Management</h3>
 
@@ -60,7 +60,25 @@
         </table>
     </section>
 
-    <!-- REPORT -->
+    <!-- STAFF SBU REPORT -->
+    <section class="panel">
+        <h3>Staff SBU Report</h3>
+
+        <select id="staffReportSelect"></select>
+
+        <select id="staffReportPeriod">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly" selected>Monthly</option>
+        </select>
+
+        <input type="date" id="staffReportDate">
+        <button id="loadStaffReportBtn">Load Staff Report</button>
+
+        <div id="staffReportResult"></div>
+    </section>
+
+    <!-- SBU REPORT -->
     <section class="panel">
         <h3>SBU Report</h3>
 
