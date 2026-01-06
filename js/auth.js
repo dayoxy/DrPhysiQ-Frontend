@@ -33,6 +33,25 @@ if (loginForm) {
     });
 }
 
+function showGlobalError(message) {
+    const banner = document.getElementById("globalError");
+    const text = document.getElementById("globalErrorText");
+
+    if (!banner || !text) return;
+
+    text.innerText = message;
+    banner.classList.remove("hidden");
+}
+
+function hideGlobalError() {
+    const banner = document.getElementById("globalError");
+    if (banner) banner.classList.add("hidden");
+}
+
+window.showGlobalError = showGlobalError;
+window.hideGlobalError = hideGlobalError;
+
+
 function getToken() {
     return localStorage.getItem("token");
 }
