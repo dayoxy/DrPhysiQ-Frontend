@@ -30,6 +30,9 @@ function enforcePasswordReset() {
     );
     sections.forEach(el => (el.style.display = "none"));
 }
+localStorage.setItem("must_change_password", "false");
+location.reload();
+
 
 // ================= AUTO-FILL TODAY =================
 function setTodayDate() {
