@@ -100,47 +100,58 @@ async function loadStaff() {
     });
 
     if (!res.ok) {
-        showGlobalError("Failed to load staff");
+        alert("Failed to load staff");
         return;
     }
 
     const staff = await res.json();
-    const tbody = document.getElementById("staffTable");
-    tbody.innerHTML = "";
 
-    if (staff.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4">No staff yet</td></tr>`;
-        return;
-    }
-
-    staff.forEach(u => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${u.full_name}</td>
-            <td>${u.username}</td>
-            <td>${u.sbu_id || "-"}</td>
+    document.getElementById("staffList").innerHTML = staff.map(s => `
+        <tr>
+            <td>${s.full_name}</td>
+            <td>${s.username}</td>
+            <td>${s.is_active ? "🟢 Active" : "🔴 Inactive"}</td>
             <td>
-                <button onclick="deleteStaff('${u.id}')">Delete</button>
+                ${
+                    s.is_active
+                        ? `<button onclick="deactivateStaff('${s.id}')">Deactivate</button>`
+                        : `<button onclick="activateStaff('${s.id}')">Activate</button>`
+                }
             </td>
-        `;
-        tbody.appendChild(tr);
-    });
+        </tr>
+    `).join("");
 }
 
 // ================= DELETE STAFF =================
-async function deleteStaff(id) {
-    if (!confirm("Delete this staff member?")) return;
+async function deactivateStaff(id) {
+    if (!confirm("Deactivate this staff?")) return;
 
-    const res = await fetch(`${API_BASE}/admin/staff/${id}`, {
-        method: "DELETE",
+    const res = await fetch(`${API_BASE}/admin/staff/${id}/deactivate`, {
+        method: "PATCH",
         headers: { Authorization: `Bearer ${token}` }
     });
 
     if (!res.ok) {
-        showGlobalError("Failed to delete staff");
+        alert("Failed to deactivate staff");
         return;
     }
 
+    alert("Staff deactivated");
+    loadStaff();
+}
+
+async function activateStaff(id) {
+    const res = await fetch(`${API_BASE}/admin/staff/${id}/activate`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+        alert("Failed to activate staff");
+        return;
+    }
+
+    alert("Staff activated");
     loadStaff();
 }
 
@@ -199,9 +210,18 @@ function renderChart(sales, expenses) {
 document.addEventListener("DOMContentLoaded", () => {
     loadSBUs();
     loadStaff();
-    document.getElementById("saveStaffBtn").onclick = createStaff;
-    document.getElementById("loadReportBtn").onclick = loadReport;
+
+    const saveStaffBtn = document.getElementById("saveStaffBtn");
+    if (saveStaffBtn) {
+        saveStaffBtn.onclick = createStaff;
+    }
+
+    const loadReportBtn = document.getElementById("loadReportBtn");
+    if (loadReportBtn) {
+        loadReportBtn.onclick = loadReport;
+    }
 });
+
 
 // ================= LOGOUT =================
 function logout() {
