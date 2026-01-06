@@ -118,6 +118,7 @@ async function loadStaff() {
     });
     if (!staff) return;
 
+    // ---------- STAFF TABLE ----------
     const tbody = document.getElementById("staffList");
     tbody.innerHTML = "";
 
@@ -141,6 +142,19 @@ async function loadStaff() {
         `;
         tbody.appendChild(tr);
     });
+
+    // ---------- STAFF REPORT DROPDOWN ----------
+    const staffSelect = document.getElementById("staffReportSelect");
+    if (staffSelect) {
+        staffSelect.innerHTML = staff
+            .filter(s => s.is_active)
+            .map(s => `<option value="${s.id}">${s.full_name}</option>`)
+            .join("");
+
+        if (!staffSelect.innerHTML) {
+            staffSelect.innerHTML = `<option disabled selected>No active staff</option>`;
+        }
+    }
 }
 
 // ================= ACTIVATE / DEACTIVATE STAFF =================
