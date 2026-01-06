@@ -53,12 +53,13 @@ async function loadStaffDashboard() {
 
     console.log("Staff dashboard data:", data);
 
-    if (!data || !data.sbu) {
-        showGlobalError(
-            "Your account is not linked to an SBU. Please contact admin."
-        );
+    if (!data) return;
+
+    if (!data.sbu || !data.sbu.id) {
+        showGlobalError("Your account is not linked to an SBU");
         return;
     }
+
 
     const sbu = data.sbu;
     const fixed = data.fixed_costs || {};
@@ -264,17 +265,22 @@ async function loadStaffAuditLogs() {
 }
 
 // ================= INIT =================
-document.addEventListener("DOMContentLoaded", () => {
-    enforcePasswordReset();
+document.addEventListener("DOMContentLoaded", async () => {
     setTodayDate();
-    loadStaffDashboard();
-    loadStaffAuditLogs();
+
+    const mustChange = localStorage.getItem("must_change_password") === "true";
+
+    if (mustChange) {
+        enforcePasswordReset();
+        return; // ❗ STOP HERE
+    }
+
+    await loadStaffDashboard();
+    await loadStaffAuditLogs();
+
     initSalesSave();
     initExpenseSave();
 
-    const changeBtn = document.getElementById("changePasswordBtn");
-    if (changeBtn) changeBtn.onclick = changePassword;
-
-    const reportBtn = document.getElementById("loadMyReportBtn");
-    if (reportBtn) reportBtn.onclick = loadMySBUReport;
+    document.getElementById("changePasswordBtn")?.onclick = changePassword;
+    document.getElementById("loadMyReportBtn")?.onclick = loadMySBUReport;
 });
