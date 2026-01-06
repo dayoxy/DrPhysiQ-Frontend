@@ -40,7 +40,7 @@ window.logout = logout;
 // ---------- LOAD STAFF DASHBOARD ----------
 async function loadStaffDashboard() {
     try {
-        const res = await fetch(`${API_BASE}/staff/my-sbu`, {
+        const res = await apifetch(`${API_BASE}/staff/my-sbu`, {
             headers: {
                 "Authorization": `Bearer ${token}`
             }
@@ -160,7 +160,7 @@ function initExpenseSave() {
             return;
         }
 
-        const res = await fetch(`${API_BASE}/staff/expenses`, {
+        const res = await apifetch(`${API_BASE}/staff/expenses`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
