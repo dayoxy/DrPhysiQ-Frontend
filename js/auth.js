@@ -92,3 +92,9 @@ function logout() {
     localStorage.clear();
     window.location.href = "index.html";
 }
+
+document.getElementById("showPassword")?.addEventListener("change", e => {
+    const input = document.getElementById("password");
+    input.type = e.target.checked ? "text" : "password";
+});
+
