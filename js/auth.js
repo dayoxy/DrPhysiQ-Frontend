@@ -51,6 +51,38 @@ function hideGlobalError() {
 window.showGlobalError = showGlobalError;
 window.hideGlobalError = hideGlobalError;
 
+async function apiFetch(url, options = {}) {
+    try {
+        const res = await fetch(url, options);
+
+        // Unauthorized
+        if (res.status === 401) {
+            showGlobalError("Session expired. Please log in again.");
+            localStorage.clear();
+            setTimeout(() => window.location.href = "index.html", 1500);
+            return null;
+        }
+
+        // Forbidden
+        if (res.status === 403) {
+            showGlobalError("You are not allowed to perform this action.");
+            return null;
+        }
+
+        // Server error
+        if (!res.ok) {
+            const text = await res.text();
+            showGlobalError(text || "Server error occurred");
+            return null;
+        }
+
+        return res;
+    } catch (err) {
+        showGlobalError("Network error. Check your connection.");
+        return null;
+    }
+}
+
 
 function getToken() {
     return localStorage.getItem("token");
