@@ -24,6 +24,11 @@ if (loginForm) {
         localStorage.setItem("role", data.role);
         localStorage.setItem("username", data.username);
 
+        localStorage.setItem(
+            "must_change_password",
+            data.must_change_password
+        );
+
         // ✅ Correct redirects
         if (data.role === "admin") {
             window.location.href = "admin.html";
