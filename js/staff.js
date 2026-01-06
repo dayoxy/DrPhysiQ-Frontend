@@ -1,27 +1,6 @@
-// js/staff.js
 console.log("staff.js loaded");
 
-// ---------- GLOBAL ERROR HANDLER ----------
-function showGlobalError(message) {
-    const banner = document.getElementById("globalError");
-    const text = document.getElementById("globalErrorText");
-
-    if (!banner || !text) {
-        alert(message); // fallback
-        return;
-    }
-
-    text.innerText = message;
-    banner.classList.remove("hidden");
-}
-
-function hideGlobalError() {
-    const banner = document.getElementById("globalError");
-    if (banner) banner.classList.add("hidden");
-}
-
-
-// ---------- AUTH GUARD ----------
+// ================= AUTH GUARD =================
 const token = localStorage.getItem("token");
 const role = localStorage.getItem("role");
 const username = localStorage.getItem("username");
@@ -30,85 +9,90 @@ if (!token || role !== "staff") {
     window.location.href = "index.html";
 }
 
-// ---------- LOGOUT ----------
+// ================= LOGOUT =================
 function logout() {
     localStorage.clear();
     window.location.href = "index.html";
 }
 window.logout = logout;
 
-// ---------- LOAD STAFF DASHBOARD ----------
-async function loadStaffDashboard() {
-    try {
-        const res = await apifetch(`${API_BASE}/staff/my-sbu`, {
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
+// ================= AUTO-FILL TODAY =================
+function setTodayDate() {
+    const today = new Date().toISOString().split("T")[0];
 
-        if (!res.ok) throw new Error("Failed to load staff dashboard");
+    const salesDate = document.getElementById("salesDate");
+    const expenseDate = document.getElementById("expenseDate");
 
-        const data = await res.json();
-        console.log("Staff SBU data:", data);
-
-        const sbu = data.sbu;
-        const fixed = data.fixed_costs || {};
-        const variable = data.variable_costs || {};
-
-        document.getElementById("staffName").innerText = username;
-        document.getElementById("sbuName").innerText = sbu.name;
-        document.getElementById("dailyBudget").innerText =
-            sbu.daily_budget.toLocaleString();
-
-        document.getElementById("salesToday").innerText =
-            (data.sales_today || 0).toLocaleString();
-
-        document.getElementById("totalExpenses").innerText =
-            (data.total_expenses || 0).toLocaleString();
-
-        document.getElementById("netProfit").innerText =
-            (data.net_profit || 0).toLocaleString();
-
-        document.getElementById("performance").innerText =
-            (data.performance_percent || 0) + "%";
-
-        const performanceEl = document.getElementById("performanceStatus");
-        if (performanceEl) {
-            performanceEl.innerText = data.performance_status;
-            performanceEl.className = "status-pill";
-
-            if (data.performance_status === "Excellent") {
-                performanceEl.classList.add("status-good");
-            } else if (data.performance_status === "warning") {
-                performanceEl.classList.add("status-warn");
-            } else {
-                performanceEl.classList.add("status-bad");
-            }
-        }
-
-        document.getElementById("personnel").innerText =
-            (fixed.personnel_cost || 0).toLocaleString();
-        document.getElementById("rent").innerText =
-            (fixed.rent || 0).toLocaleString();
-        document.getElementById("electricity").innerText =
-            (fixed.electricity || 0).toLocaleString();
-
-        document.getElementById("consumables").innerText =
-            (variable.consumables || 0).toLocaleString();
-        document.getElementById("generalExpenses").innerText =
-            (variable.general_expenses || 0).toLocaleString();
-        document.getElementById("utilities").innerText =
-            (variable.utilities || 0).toLocaleString();
-        document.getElementById("miscellaneous").innerText =
-            (variable.miscellaneous || 0).toLocaleString();
-
-    } catch (err) {
-        console.error(err);
-        alert("Error loading staff dashboard");
-    }
+    if (salesDate) salesDate.value = today;
+    if (expenseDate) expenseDate.value = today;
 }
 
-// ---------- SAVE SALES ----------
+// ================= LOAD DASHBOARD =================
+async function loadStaffDashboard() {
+    const res = await apiFetch(`${API_BASE}/staff/my-sbu`, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!res) return;
+
+    const data = await res.json();
+
+    const sbu = data.sbu;
+    const fixed = data.fixed_costs || {};
+    const variable = data.variable_costs || {};
+
+    document.getElementById("staffName").innerText = username;
+    document.getElementById("sbuName").innerText = sbu.name;
+
+    document.getElementById("dailyBudget").innerText =
+        sbu.daily_budget.toLocaleString();
+
+    document.getElementById("salesToday").innerText =
+        (data.sales_today || 0).toLocaleString();
+
+    document.getElementById("totalExpenses").innerText =
+        (data.total_expenses || 0).toLocaleString();
+
+    document.getElementById("netProfit").innerText =
+        (data.net_profit || 0).toLocaleString();
+
+    document.getElementById("performance").innerText =
+        (data.performance_percent || 0) + "%";
+
+    const perfEl = document.getElementById("performanceStatus");
+    if (perfEl) {
+        perfEl.innerText = data.performance_status;
+        perfEl.className = "status-pill";
+
+        if (data.performance_status === "Excellent") {
+            perfEl.classList.add("status-good");
+        } else if (data.performance_status === "warning") {
+            perfEl.classList.add("status-warn");
+        } else {
+            perfEl.classList.add("status-bad");
+        }
+    }
+
+    document.getElementById("personnel").innerText =
+        (fixed.personnel_cost || 0).toLocaleString();
+    document.getElementById("rent").innerText =
+        (fixed.rent || 0).toLocaleString();
+    document.getElementById("electricity").innerText =
+        (fixed.electricity || 0).toLocaleString();
+
+    document.getElementById("consumables").innerText =
+        (variable.consumables || 0).toLocaleString();
+    document.getElementById("generalExpenses").innerText =
+        (variable.general_expenses || 0).toLocaleString();
+    document.getElementById("utilities").innerText =
+        (variable.utilities || 0).toLocaleString();
+    document.getElementById("miscellaneous").innerText =
+        (variable.miscellaneous || 0).toLocaleString();
+}
+
+// ================= SAVE SALES =================
 function initSalesSave() {
     const btn = document.getElementById("saveSalesBtn");
     if (!btn) return;
@@ -123,7 +107,6 @@ function initSalesSave() {
             return;
         }
 
-        // 🔒 Disable button
         btn.disabled = true;
         btn.innerText = "Saving...";
 
@@ -136,19 +119,18 @@ function initSalesSave() {
             body: JSON.stringify({ amount, sale_date, notes })
         });
 
-        // 🔓 Re-enable button
         btn.disabled = false;
         btn.innerText = "Save Sales";
 
         if (!res) return;
 
-        showGlobalError("Sales saved successfully");
         document.getElementById("salesInput").value = "";
         loadStaffDashboard();
+        loadExpenseHistory();
     });
 }
 
-// ---------- SAVE EXPENSE ----------
+// ================= SAVE EXPENSE =================
 function initExpenseSave() {
     const btn = document.getElementById("saveExpenseBtn");
     if (!btn) return;
@@ -160,87 +142,74 @@ function initExpenseSave() {
         const notes = document.getElementById("expenseNotes")?.value || "";
 
         if (!amount || amount <= 0 || !date) {
-            alert("Enter valid expense details");
+            showGlobalError("Enter valid expense details");
             return;
         }
 
-        const res = await apifetch(`${API_BASE}/staff/expenses`, {
+        btn.disabled = true;
+        btn.innerText = "Saving...";
+
+        const res = await apiFetch(`${API_BASE}/staff/expenses`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({ category, amount, date, notes })
         });
 
-        if (!res.ok) {
-            const err = await res.json();
-            alert(err.detail || "Failed to save expense");
-            return;
-        }
+        btn.disabled = false;
+        btn.innerText = "Save Expense";
 
-        alert("Expense saved successfully");
+        if (!res) return;
+
         document.getElementById("expenseAmount").value = "";
         loadStaffDashboard();
         loadExpenseHistory();
     });
 }
 
-// ---------- AUTO-FILL TODAY'S DATE ----------
-function setTodayDate() {
-    const today = new Date().toISOString().split("T")[0];
-
-    const salesDate = document.getElementById("salesDate");
-    const expenseDate = document.getElementById("expenseDate");
-
-    if (salesDate) salesDate.value = today;
-    if (expenseDate) expenseDate.value = today;
-}
-
-// ---------- EXPENSE HISTORY ----------
+// ================= EXPENSE HISTORY =================
 async function loadExpenseHistory() {
-    try {
-        const res = await fetch(`${API_BASE}/staff/expenses/history`, {
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
+    const res = await apiFetch(`${API_BASE}/staff/expenses/history`, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
 
-        if (!res.ok) return;
+    if (!res) return;
 
-        const data = await res.json();
-        const tbody = document.getElementById("expenseHistoryBody");
-        tbody.innerHTML = "";
+    const data = await res.json();
+    const tbody = document.getElementById("expenseHistoryBody");
+    if (!tbody) return;
 
-        Object.entries(data).forEach(([date, row]) => {
-            const total =
-                (row.consumables || 0) +
-                (row.general_expenses || 0) +
-                (row.utilities || 0) +
-                (row.miscellaneous || 0);
+    tbody.innerHTML = "";
 
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${date}</td>
-                <td>${row.consumables || 0}</td>
-                <td>${row.general_expenses || 0}</td>
-                <td>${row.utilities || 0}</td>
-                <td>${row.miscellaneous || 0}</td>
-                <td><strong>${total}</strong></td>
-            `;
-            tbody.appendChild(tr);
-        });
+    Object.entries(data).forEach(([date, row]) => {
+        const total =
+            (row.consumables || 0) +
+            (row.general_expenses || 0) +
+            (row.utilities || 0) +
+            (row.miscellaneous || 0);
 
-    } catch (err) {
-        console.error("Failed to load expense history", err);
-    }
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${date}</td>
+            <td>${row.consumables || 0}</td>
+            <td>${row.general_expenses || 0}</td>
+            <td>${row.utilities || 0}</td>
+            <td>${row.miscellaneous || 0}</td>
+            <td><strong>${total}</strong></td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
-// ---------- INIT ----------
+// ================= INIT =================
 document.addEventListener("DOMContentLoaded", () => {
     setTodayDate();
     loadStaffDashboard();
+    loadExpenseHistory();
     initSalesSave();
     initExpenseSave();
-    loadExpenseHistory();
 });
