@@ -4,6 +4,8 @@ console.log("staff.js loaded");
 const token = localStorage.getItem("token");
 const role = localStorage.getItem("role");
 const username = localStorage.getItem("username");
+const mustChangePassword =
+    localStorage.getItem("must_change_password") === "true";
 
 if (!token || role !== "staff") {
     localStorage.clear();
@@ -17,27 +19,35 @@ function logout() {
 }
 window.logout = logout;
 
+// ================= FORCE PASSWORD RESET =================
+function enforcePasswordReset() {
+    if (!mustChangePassword) return;
+
+    document.body.classList.add("force-password-reset");
+
+    const sections = document.querySelectorAll(
+        ".panel:not(.password-panel)"
+    );
+    sections.forEach(el => (el.style.display = "none"));
+}
+
 // ================= AUTO-FILL TODAY =================
 function setTodayDate() {
     const today = new Date().toISOString().split("T")[0];
-
-    const salesDate = document.getElementById("salesDate");
-    const expenseDate = document.getElementById("expenseDate");
-
-    if (salesDate) salesDate.value = today;
-    if (expenseDate) expenseDate.value = today;
+    if (document.getElementById("salesDate"))
+        document.getElementById("salesDate").value = today;
+    if (document.getElementById("expenseDate"))
+        document.getElementById("expenseDate").value = today;
 }
 
-// ================= LOAD STAFF DASHBOARD =================
+// ================= DASHBOARD =================
 async function loadStaffDashboard() {
     const data = await apiFetch(`${API_BASE}/staff/my-sbu`, {
         headers: { Authorization: `Bearer ${token}` }
     });
     if (!data) return;
 
-    const sbu = data.sbu;
-    const fixed = data.fixed_costs || {};
-    const variable = data.variable_costs || {};
+    const { sbu, fixed_costs = {}, variable_costs = {} } = data;
 
     document.getElementById("staffName").innerText = username;
     document.getElementById("sbuName").innerText = sbu.name;
@@ -57,38 +67,33 @@ async function loadStaffDashboard() {
     document.getElementById("performance").innerText =
         (data.performance_percent || 0) + "%";
 
-    // ---- Performance status ----
     const perfEl = document.getElementById("performanceStatus");
     if (perfEl) {
         perfEl.innerText = data.performance_status;
         perfEl.className = "status-pill";
 
-        if (data.performance_status === "Excellent") {
+        if (data.performance_status === "Excellent")
             perfEl.classList.add("status-good");
-        } else if (data.performance_status === "warning") {
+        else if (data.performance_status === "warning")
             perfEl.classList.add("status-warn");
-        } else {
-            perfEl.classList.add("status-bad");
-        }
+        else perfEl.classList.add("status-bad");
     }
 
-    // ---- Fixed costs ----
     document.getElementById("personnel").innerText =
-        (fixed.personnel_cost || 0).toLocaleString();
+        (fixed_costs.personnel_cost || 0).toLocaleString();
     document.getElementById("rent").innerText =
-        (fixed.rent || 0).toLocaleString();
+        (fixed_costs.rent || 0).toLocaleString();
     document.getElementById("electricity").innerText =
-        (fixed.electricity || 0).toLocaleString();
+        (fixed_costs.electricity || 0).toLocaleString();
 
-    // ---- Variable costs ----
     document.getElementById("consumables").innerText =
-        (variable.consumables || 0).toLocaleString();
+        (variable_costs.consumables || 0).toLocaleString();
     document.getElementById("generalExpenses").innerText =
-        (variable.general_expenses || 0).toLocaleString();
+        (variable_costs.general_expenses || 0).toLocaleString();
     document.getElementById("utilities").innerText =
-        (variable.utilities || 0).toLocaleString();
+        (variable_costs.utilities || 0).toLocaleString();
     document.getElementById("miscellaneous").innerText =
-        (variable.miscellaneous || 0).toLocaleString();
+        (variable_costs.miscellaneous || 0).toLocaleString();
 }
 
 // ================= SAVE SALES =================
@@ -109,7 +114,7 @@ function initSalesSave() {
         btn.disabled = true;
         btn.innerText = "Saving...";
 
-        const res = await apiFetch(`${API_BASE}/staff/sales`, {
+        const ok = await apiFetch(`${API_BASE}/staff/sales`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -121,10 +126,11 @@ function initSalesSave() {
         btn.disabled = false;
         btn.innerText = "Save Sales";
 
-        if (!res) return;
-
-        document.getElementById("salesInput").value = "";
-        loadStaffDashboard();
+        if (ok) {
+            document.getElementById("salesInput").value = "";
+            loadStaffDashboard();
+            loadStaffAuditLogs();
+        }
     };
 }
 
@@ -147,7 +153,7 @@ function initExpenseSave() {
         btn.disabled = true;
         btn.innerText = "Saving...";
 
-        const res = await apiFetch(`${API_BASE}/staff/expenses`, {
+        const ok = await apiFetch(`${API_BASE}/staff/expenses`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -159,11 +165,37 @@ function initExpenseSave() {
         btn.disabled = false;
         btn.innerText = "Save Expense";
 
-        if (!res) return;
-
-        document.getElementById("expenseAmount").value = "";
-        loadStaffDashboard();
+        if (ok) {
+            document.getElementById("expenseAmount").value = "";
+            loadStaffDashboard();
+            loadStaffAuditLogs();
+        }
     };
+}
+
+// ================= STAFF REPORT =================
+async function loadMySBUReport() {
+    const period = document.getElementById("staffReportPeriod").value;
+    const date = document.getElementById("staffReportDate").value;
+
+    if (!date) {
+        showGlobalError("Select a date");
+        return;
+    }
+
+    const data = await apiFetch(
+        `${API_BASE}/staff/my-sbu/report?period=${period}&report_date=${date}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!data) return;
+
+    document.getElementById("myReportResult").innerHTML = `
+        <p><strong>Total Sales:</strong> ₦${data.total_sales.toLocaleString()}</p>
+        <p><strong>Total Expenses:</strong> ₦${data.total_expenses.toLocaleString()}</p>
+        <p><strong>Net Profit:</strong> ₦${data.net_profit.toLocaleString()}</p>
+        <p><strong>Performance:</strong> ${data.performance_percent}%</p>
+    `;
 }
 
 // ================= CHANGE PASSWORD =================
@@ -172,11 +204,11 @@ async function changePassword() {
     const new_password = document.getElementById("newPassword").value;
 
     if (!old_password || !new_password) {
-        alert("Fill all fields");
+        showGlobalError("Fill all fields");
         return;
     }
 
-    const res = await apiFetch(`${API_BASE}/staff/change-password`, {
+    const ok = await apiFetch(`${API_BASE}/staff/change-password`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -185,20 +217,46 @@ async function changePassword() {
         body: JSON.stringify({ old_password, new_password })
     });
 
-    if (res) {
+    if (ok) {
         alert("Password changed successfully");
-        document.getElementById("oldPassword").value = "";
-        document.getElementById("newPassword").value = "";
+        localStorage.setItem("must_change_password", "false");
+        location.reload();
     }
+}
+
+// ================= AUDIT LOGS =================
+async function loadStaffAuditLogs() {
+    const container = document.getElementById("staffAuditLog");
+    if (!container) return;
+
+    const logs = await apiFetch(`${API_BASE}/staff/audit-logs`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    container.innerHTML = logs?.length
+        ? logs
+              .map(
+                  l =>
+                      `<p>${l.action} — ${new Date(
+                          l.time
+                      ).toLocaleString()}</p>`
+              )
+              .join("")
+        : "<p class='muted'>No activity yet</p>";
 }
 
 // ================= INIT =================
 document.addEventListener("DOMContentLoaded", () => {
+    enforcePasswordReset();
     setTodayDate();
     loadStaffDashboard();
+    loadStaffAuditLogs();
     initSalesSave();
     initExpenseSave();
 
     const changeBtn = document.getElementById("changePasswordBtn");
     if (changeBtn) changeBtn.onclick = changePassword;
+
+    const reportBtn = document.getElementById("loadMyReportBtn");
+    if (reportBtn) reportBtn.onclick = loadMySBUReport;
 });
