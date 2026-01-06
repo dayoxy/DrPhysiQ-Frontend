@@ -23,34 +23,50 @@ function logout() {
 }
 window.logout = logout;
 
+// ================= SAFE FETCH =================
+async function safeFetch(url, options = {}) {
+    try {
+        const res = await fetch(url, options);
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            alert(err.detail || "Request failed");
+            return null;
+        }
+
+        return await res.json();
+    } catch (err) {
+        console.error("Network error:", err);
+        alert("Network error. Please try again.");
+        return null;
+    }
+}
+
 // ================= LOAD SBUs =================
 async function loadSBUs() {
-    const res = await apiFetch(`${API_BASE}/admin/sbus`, {
+    const sbus = await safeFetch(`${API_BASE}/admin/sbus`, {
         headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res) return;
+    if (!sbus) return;
 
-    const sbus = await res.json();
-
-    // SBU summary
     const output = document.getElementById("output");
     if (output) {
-        output.innerHTML = sbus
-            .map(s => `<p><strong>${s.name}</strong> — ₦${s.daily_budget.toLocaleString()}</p>`)
-            .join("");
+        output.innerHTML = sbus.length
+            ? sbus.map(s =>
+                `<p><strong>${s.name}</strong> — ₦${(s.daily_budget ?? 0).toLocaleString()}</p>`
+              ).join("")
+            : "<p>No SBUs found</p>";
     }
 
-    // Populate SBU selects
+    const options = sbus
+        .map(s => `<option value="${s.id}">${s.name}</option>`)
+        .join("");
+
     const sbuSelect = document.getElementById("sbuSelect");
     const reportSBU = document.getElementById("reportSBU");
 
-    if (sbuSelect) {
-        sbuSelect.innerHTML = sbus.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
-    }
-
-    if (reportSBU) {
-        reportSBU.innerHTML = sbus.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
-    }
+    if (sbuSelect) sbuSelect.innerHTML = options;
+    if (reportSBU) reportSBU.innerHTML = options;
 }
 
 // ================= CREATE STAFF =================
@@ -61,7 +77,7 @@ async function createStaff() {
     const sbu_id = document.getElementById("sbuSelect").value;
 
     if (!full_name || !staff_username || !password || !sbu_id) {
-        showGlobalError("Please fill all staff fields");
+        alert("Please fill all staff fields");
         return;
     }
 
@@ -69,7 +85,7 @@ async function createStaff() {
     btn.disabled = true;
     btn.innerText = "Saving...";
 
-    const res = await apiFetch(`${API_BASE}/admin/create-staff`, {
+    const result = await safeFetch(`${API_BASE}/admin/create-staff`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -79,14 +95,14 @@ async function createStaff() {
             full_name,
             username: staff_username,
             password,
-            department_id: sbu_id
+            sbu_id
         })
     });
 
     btn.disabled = false;
     btn.innerText = "Create Staff";
 
-    if (!res) return;
+    if (!result) return;
 
     document.getElementById("full_name").value = "";
     document.getElementById("staff_username").value = "";
@@ -97,14 +113,11 @@ async function createStaff() {
 
 // ================= LOAD STAFF =================
 async function loadStaff() {
-    const res = await apiFetch(`${API_BASE}/admin/staff`, {
+    const staff = await safeFetch(`${API_BASE}/admin/staff`, {
         headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res) return;
+    if (!staff) return;
 
-    const staff = await res.json();
-
-    // Staff table
     const tbody = document.getElementById("staffList");
     tbody.innerHTML = "";
 
@@ -128,150 +141,119 @@ async function loadStaff() {
         `;
         tbody.appendChild(tr);
     });
-
-    // Staff report dropdown
-    const staffSelect = document.getElementById("staffReportSelect");
-    if (staffSelect) {
-        staffSelect.innerHTML = staff
-            .filter(s => s.is_active)
-            .map(s => `<option value="${s.id}">${s.full_name}</option>`)
-            .join("");
-    }
 }
 
 // ================= ACTIVATE / DEACTIVATE STAFF =================
 async function deactivateStaff(id) {
     if (!confirm("Deactivate this staff member?")) return;
 
-    const res = await apiFetch(`${API_BASE}/admin/staff/${id}/deactivate`, {
+    const ok = await safeFetch(`${API_BASE}/admin/staff/${id}/deactivate`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res) return;
-
-    loadStaff();
+    if (ok) loadStaff();
 }
 
 async function activateStaff(id) {
-    const res = await apiFetch(`${API_BASE}/admin/staff/${id}/activate`, {
+    const ok = await safeFetch(`${API_BASE}/admin/staff/${id}/activate`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res) return;
-
-    loadStaff();
+    if (ok) loadStaff();
 }
 
 window.deactivateStaff = deactivateStaff;
 window.activateStaff = activateStaff;
 
-// ================= LOAD SBU REPORT =================
+// ================= LOAD SBU REPORT (WITH STAFF BREAKDOWN) =================
 async function loadReport() {
-    const sbuId = document.getElementById("reportSBU").value;
+    const sbuSelect = document.getElementById("reportSBU");
+    const sbuId = sbuSelect.value;
+    const sbuName = sbuSelect.selectedOptions[0]?.text || "SBU";
     const period = document.getElementById("reportPeriod").value;
     const date = document.getElementById("reportDate").value;
 
     if (!sbuId || !date) {
-        showGlobalError("Select SBU and date");
+        alert("Select SBU and date");
         return;
     }
 
-    const btn = document.getElementById("loadReportBtn");
-    btn.disabled = true;
-    btn.innerText = "Loading...";
-
-    const res = await apiFetch(
+    const data = await safeFetch(
         `${API_BASE}/admin/sbu-report?sbu_id=${sbuId}&period=${period}&report_date=${date}`,
         { headers: { Authorization: `Bearer ${token}` } }
     );
+    if (!data) return;
 
-    btn.disabled = false;
-    btn.innerText = "Load Report";
+    const {
+        total_sales = 0,
+        total_expenses = 0,
+        net_profit = 0,
+        performance_percent = 0,
+        staff_breakdown = []
+    } = data;
 
-    if (!res) return;
-
-    const data = await res.json();
-
-    document.getElementById("reportResult").innerHTML = `
-        <h4>${data.sbu.name}</h4>
-        <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
-        <p>Total Expenses: ₦${data.total_expenses.toLocaleString()}</p>
-        <p>Net Profit: ₦${data.net_profit.toLocaleString()}</p>
-        <p>Performance: ${data.performance_percent}%</p>
+    let html = `
+        <h4>${sbuName} — ${period} Report</h4>
+        <p>Total Sales: ₦${total_sales.toLocaleString()}</p>
+        <p>Total Expenses: ₦${total_expenses.toLocaleString()}</p>
+        <p>Net Profit: ₦${net_profit.toLocaleString()}</p>
+        <p>Performance: ${performance_percent}%</p>
     `;
-}
 
-// ================= STAFF SBU REPORT =================
-async function loadStaffSBUReport() {
-    const staffId = document.getElementById("staffReportSelect").value;
-    const period = document.getElementById("staffReportPeriod").value;
-    const date = document.getElementById("staffReportDate").value;
+    if (staff_breakdown.length) {
+        html += `
+            <h5>Staff Contributions</h5>
+            <table>
+                <tr>
+                    <th>Staff</th>
+                    <th>Sales</th>
+                    <th>Expenses</th>
+                    <th>Net</th>
+                </tr>
+        `;
 
-    if (!staffId || !date) {
-        showGlobalError("Select staff and date");
-        return;
+        staff_breakdown.forEach(s => {
+            html += `
+                <tr>
+                    <td>${s.staff_name}</td>
+                    <td>₦${(s.total_sales ?? 0).toLocaleString()}</td>
+                    <td>₦${(s.total_expenses ?? 0).toLocaleString()}</td>
+                    <td>₦${(s.net_profit ?? 0).toLocaleString()}</td>
+                </tr>
+            `;
+        });
+
+        html += `</table>`;
     }
 
-    const btn = document.getElementById("loadStaffReportBtn");
-    btn.disabled = true;
-    btn.innerText = "Loading...";
-
-    const res = await apiFetch(
-        `${API_BASE}/admin/staff/${staffId}/sbu-report?period=${period}&report_date=${date}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    btn.disabled = false;
-    btn.innerText = "Load Staff Report";
-
-    if (!res) return;
-
-    const data = await res.json();
-
-    document.getElementById("staffReportResult").innerHTML = `
-        <h4>${data.staff.name} — ${data.sbu.name}</h4>
-        <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
-        <p>Total Expenses: ₦${data.total_expenses.toLocaleString()}</p>
-        <p>Net Profit: ₦${data.net_profit.toLocaleString()}</p>
-        <p>Performance: ${data.performance_percent}%</p>
-    `;
+    document.getElementById("reportResult").innerHTML = html;
 }
-let staffHtml = "<h5>Staff Contributions</h5><table><tr><th>Staff</th><th>Sales</th><th>Expenses</th><th>Net</th></tr>";
 
-(data.staff_breakdown || []).forEach(s => {
-    staffHtml += `
-        <tr>
-            <td>${s.staff_name}</td>
-            <td>₦${(s.total_sales ?? 0).toLocaleString()}</td>
-            <td>₦${(s.total_expenses ?? 0).toLocaleString()}</td>
-            <td>₦${(s.net_profit ?? 0).toLocaleString()}</td>
-        </tr>
-    `;
-});
-
-staffHtml += "</table>";
-
-document.getElementById("reportResult").innerHTML += staffHtml;'
-
+// ================= LOAD AUDIT LOGS =================
 async function loadAuditLogs() {
+    const container = document.getElementById("auditLog");
+    if (!container) return;
+
     const logs = await safeFetch(`${API_BASE}/admin/audit-logs`, {
         headers: { Authorization: `Bearer ${token}` }
     });
-    if (!logs) return;
+    if (!logs || !logs.length) {
+        container.innerHTML = "<p>No activity yet</p>";
+        return;
+    }
 
-    document.getElementById("auditLog").innerHTML = logs
-        .map(l => `<p><strong>${l.staff}</strong> — ${l.action} (${new Date(l.time).toLocaleString()})</p>`)
-        .join("");
+    container.innerHTML = logs.map(l => {
+        const time = l.time ? new Date(l.time).toLocaleString() : "Unknown time";
+        return `<p><strong>${l.staff}</strong> — ${l.action} (${time})</p>`;
+    }).join("");
 }
-
-
 
 // ================= INIT =================
 document.addEventListener("DOMContentLoaded", () => {
     loadSBUs();
     loadStaff();
+    loadAuditLogs();
 
     document.getElementById("saveStaffBtn").onclick = createStaff;
     document.getElementById("loadReportBtn").onclick = loadReport;
-    document.getElementById("loadStaffReportBtn").onclick = loadStaffSBUReport;
 });
