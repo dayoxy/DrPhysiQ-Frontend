@@ -4,17 +4,29 @@
     <title>DrPhysiQ Login</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body class="login-page">
 
-<div class="login-box">
-    <img src="assets/Logo.png" class="Logo">
-    <h2>DrPhysiQ SBU System</h2>
+<div class="login-wrapper">
+    <div class="login-box">
+        <img src="assets/Logo.png" class="Logo" alt="DrPhysiQ Logo">
 
-    <form id="loginForm">
-        <input id="username" placeholder="Username" required>
-        <input id="password" type="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-    </form>
+        <h2>DrPhysiQ SBU System</h2>
+        <p class="muted">Secure internal access</p>
+
+        <form id="loginForm">
+            <input id="username" placeholder="Username" required>
+
+            <div class="password-field">
+                <input id="password" type="password" placeholder="Password" required>
+                <label>
+                    <input type="checkbox" id="showPassword">
+                    Show
+                </label>
+            </div>
+
+            <button type="submit">Login</button>
+        </form>
+    </div>
 </div>
 
 <script src="js/config.js"></script>
