@@ -1,6 +1,26 @@
 // js/staff.js
 console.log("staff.js loaded");
 
+// ---------- GLOBAL ERROR HANDLER ----------
+function showGlobalError(message) {
+    const banner = document.getElementById("globalError");
+    const text = document.getElementById("globalErrorText");
+
+    if (!banner || !text) {
+        alert(message); // fallback
+        return;
+    }
+
+    text.innerText = message;
+    banner.classList.remove("hidden");
+}
+
+function hideGlobalError() {
+    const banner = document.getElementById("globalError");
+    if (banner) banner.classList.add("hidden");
+}
+
+
 // ---------- AUTH GUARD ----------
 const token = localStorage.getItem("token");
 const role = localStorage.getItem("role");
