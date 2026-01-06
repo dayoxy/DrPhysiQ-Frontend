@@ -10,11 +10,30 @@ if (!token || role !== "admin") {
     window.location.href = "index.html";
 }
 
+// ================= GLOBAL UI HELPERS =================
+function showGlobalError(msg) {
+    const banner = document.getElementById("globalError");
+    const text = document.getElementById("globalErrorText");
+    if (!banner || !text) return;
+    text.innerText = msg;
+    banner.classList.remove("hidden");
+}
+
+function hideGlobalError() {
+    const banner = document.getElementById("globalError");
+    if (banner) banner.classList.add("hidden");
+}
+
+function setButtonLoading(btn, loading, text = "Loading...") {
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.dataset.originalText ||= btn.innerText;
+    btn.innerText = loading ? text : btn.dataset.originalText;
+}
+
 // ================= HEADER =================
 const adminUserEl = document.getElementById("adminUser");
-if (adminUserEl) {
-    adminUserEl.innerText = `Logged in as: ${username}`;
-}
+if (adminUserEl) adminUserEl.innerText = `Logged in as: ${username}`;
 
 // ================= LOGOUT =================
 function logout() {
@@ -25,19 +44,18 @@ window.logout = logout;
 
 // ================= SAFE FETCH =================
 async function safeFetch(url, options = {}) {
+    hideGlobalError();
     try {
         const res = await fetch(url, options);
-
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            alert(err.detail || "Request failed");
+            showGlobalError(err.detail || "Request failed");
             return null;
         }
-
         return await res.json();
     } catch (err) {
-        console.error("Network error:", err);
-        alert("Network error. Please try again.");
+        console.error(err);
+        showGlobalError("Network error. Please check your connection.");
         return null;
     }
 }
@@ -55,7 +73,7 @@ async function loadSBUs() {
             ? sbus.map(s =>
                 `<p><strong>${s.name}</strong> — ₦${(s.daily_budget ?? 0).toLocaleString()}</p>`
               ).join("")
-            : "<p>No SBUs found</p>";
+            : "<p class='muted'>No SBUs found</p>";
     }
 
     const options = sbus
@@ -77,13 +95,12 @@ async function createStaff() {
     const sbu_id = document.getElementById("sbuSelect").value;
 
     if (!full_name || !staff_username || !password || !sbu_id) {
-        alert("Please fill all staff fields");
+        showGlobalError("Please fill all staff fields");
         return;
     }
 
     const btn = document.getElementById("saveStaffBtn");
-    btn.disabled = true;
-    btn.innerText = "Saving...";
+    setButtonLoading(btn, true, "Creating...");
 
     const result = await safeFetch(`${API_BASE}/admin/create-staff`, {
         method: "POST",
@@ -99,14 +116,13 @@ async function createStaff() {
         })
     });
 
-    btn.disabled = false;
-    btn.innerText = "Create Staff";
-
+    setButtonLoading(btn, false);
     if (!result) return;
 
-    document.getElementById("full_name").value = "";
-    document.getElementById("staff_username").value = "";
-    document.getElementById("staff_password").value = "";
+    ["full_name", "staff_username", "staff_password"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
 
     loadStaff();
 }
@@ -118,9 +134,7 @@ async function loadStaff() {
     });
     if (!staff) return;
 
-    console.log("Staff API response:", staff);
-
-    // ---------- STAFF TABLE ----------
+    // ---- Table ----
     const tbody = document.getElementById("staffList");
     tbody.innerHTML = "";
 
@@ -145,26 +159,19 @@ async function loadStaff() {
         tbody.appendChild(tr);
     });
 
-    // ---------- STAFF REPORT DROPDOWN (THIS WAS MISSING) ----------
+    // ---- Staff Report Dropdown ----
     const staffSelect = document.getElementById("staffReportSelect");
-    if (!staffSelect) {
-        console.error("staffReportSelect not found");
-        return;
+    if (staffSelect) {
+        const active = staff.filter(s => s.is_active === true);
+        staffSelect.innerHTML = active.length
+            ? active.map(s => `<option value="${s.id}">${s.full_name}</option>`).join("")
+            : `<option disabled selected>No active staff</option>`;
     }
-
-    const activeStaff = staff.filter(s => s.is_active === true);
-
-    staffSelect.innerHTML = activeStaff.length
-        ? activeStaff.map(s =>
-            `<option value="${s.id}">${s.full_name}</option>`
-          ).join("")
-        : `<option disabled selected>No active staff</option>`;
 }
 
-// ================= ACTIVATE / DEACTIVATE STAFF =================
+// ================= ACTIVATE / DEACTIVATE =================
 async function deactivateStaff(id) {
     if (!confirm("Deactivate this staff member?")) return;
-
     const ok = await safeFetch(`${API_BASE}/admin/staff/${id}/deactivate`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` }
@@ -183,7 +190,7 @@ async function activateStaff(id) {
 window.deactivateStaff = deactivateStaff;
 window.activateStaff = activateStaff;
 
-// ================= LOAD SBU REPORT (WITH STAFF BREAKDOWN) =================
+// ================= SBU REPORT =================
 async function loadReport() {
     const sbuSelect = document.getElementById("reportSBU");
     const sbuId = sbuSelect.value;
@@ -192,14 +199,19 @@ async function loadReport() {
     const date = document.getElementById("reportDate").value;
 
     if (!sbuId || !date) {
-        alert("Select SBU and date");
+        showGlobalError("Select SBU and date");
         return;
     }
+
+    const btn = document.getElementById("loadReportBtn");
+    setButtonLoading(btn, true);
 
     const data = await safeFetch(
         `${API_BASE}/admin/sbu-report?sbu_id=${sbuId}&period=${period}&report_date=${date}`,
         { headers: { Authorization: `Bearer ${token}` } }
     );
+
+    setButtonLoading(btn, false);
     if (!data) return;
 
     const {
@@ -222,32 +234,54 @@ async function loadReport() {
         html += `
             <h5>Staff Contributions</h5>
             <table>
-                <tr>
-                    <th>Staff</th>
-                    <th>Sales</th>
-                    <th>Expenses</th>
-                    <th>Net</th>
-                </tr>
+                <tr><th>Staff</th><th>Sales</th><th>Expenses</th><th>Net</th></tr>
+                ${staff_breakdown.map(s => `
+                    <tr>
+                        <td>${s.staff_name}</td>
+                        <td>₦${(s.total_sales ?? 0).toLocaleString()}</td>
+                        <td>₦${(s.total_expenses ?? 0).toLocaleString()}</td>
+                        <td>₦${(s.net_profit ?? 0).toLocaleString()}</td>
+                    </tr>
+                `).join("")}
+            </table>
         `;
-
-        staff_breakdown.forEach(s => {
-            html += `
-                <tr>
-                    <td>${s.staff_name}</td>
-                    <td>₦${(s.total_sales ?? 0).toLocaleString()}</td>
-                    <td>₦${(s.total_expenses ?? 0).toLocaleString()}</td>
-                    <td>₦${(s.net_profit ?? 0).toLocaleString()}</td>
-                </tr>
-            `;
-        });
-
-        html += `</table>`;
     }
 
     document.getElementById("reportResult").innerHTML = html;
 }
 
-// ================= LOAD AUDIT LOGS =================
+// ================= STAFF SBU REPORT =================
+async function loadStaffSBUReport() {
+    const staffId = document.getElementById("staffReportSelect")?.value;
+    const period = document.getElementById("staffReportPeriod")?.value;
+    const date = document.getElementById("staffReportDate")?.value;
+
+    if (!staffId || !date) {
+        showGlobalError("Select staff and date");
+        return;
+    }
+
+    const btn = document.getElementById("loadStaffReportBtn");
+    setButtonLoading(btn, true);
+
+    const data = await safeFetch(
+        `${API_BASE}/admin/staff/${staffId}/sbu-report?period=${period}&report_date=${date}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    setButtonLoading(btn, false);
+    if (!data) return;
+
+    document.getElementById("staffReportResult").innerHTML = `
+        <h4>${data.staff.name} — ${data.sbu.name}</h4>
+        <p>Total Sales: ₦${(data.total_sales ?? 0).toLocaleString()}</p>
+        <p>Total Expenses: ₦${(data.total_expenses ?? 0).toLocaleString()}</p>
+        <p>Net Profit: ₦${(data.net_profit ?? 0).toLocaleString()}</p>
+        <p>Performance: ${data.performance_percent ?? 0}%</p>
+    `;
+}
+
+// ================= AUDIT LOGS =================
 async function loadAuditLogs() {
     const container = document.getElementById("auditLog");
     if (!container) return;
@@ -255,15 +289,12 @@ async function loadAuditLogs() {
     const logs = await safeFetch(`${API_BASE}/admin/audit-logs`, {
         headers: { Authorization: `Bearer ${token}` }
     });
-    if (!logs || !logs.length) {
-        container.innerHTML = "<p>No activity yet</p>";
-        return;
-    }
 
-    container.innerHTML = logs.map(l => {
-        const time = l.time ? new Date(l.time).toLocaleString() : "Unknown time";
-        return `<p><strong>${l.staff}</strong> — ${l.action} (${time})</p>`;
-    }).join("");
+    container.innerHTML = logs?.length
+        ? logs.map(l =>
+            `<p><strong>${l.staff}</strong> — ${l.action} (${new Date(l.time).toLocaleString()})</p>`
+          ).join("")
+        : "<p class='muted'>No activity yet</p>";
 }
 
 // ================= INIT =================
