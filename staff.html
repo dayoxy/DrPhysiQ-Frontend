@@ -1,38 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>DrPhysiQ – Staff Dashboard</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="css/styles.css" />
+
+    <!-- 🚫 PREVENT FLICKER -->
+    <style>
+        body {
+            visibility: hidden;
+        }
+        body.ready {
+            visibility: visible;
+        }
+    </style>
 </head>
+
 <body>
-
-    <section class="panel">
-    <h3>Change Password</h3>
-
-    <input type="password" id="oldPassword" placeholder="Current password">
-    <input type="password" id="newPassword" placeholder="New password">
-
-    <button id="changePasswordBtn">Change Password</button>
-</section>
-
-    <section class="panel">
-    <h3>My SBU Report</h3>
-
-    <select id="staffReportPeriod">
-        <option value="daily">Daily</option>
-        <option value="weekly">Weekly</option>
-        <option value="monthly" selected>Monthly</option>
-    </select>
-
-    <input type="date" id="staffReportDate">
-    <button id="loadMyReportBtn">Load Report</button>
-
-    <div id="myReportResult"></div>
-</section>
-
-
 
 <header class="app-header">
     <h2>DrPhysiQ</h2>
@@ -44,7 +29,33 @@
 
 <main class="main">
 
-    <!-- DASHBOARD -->
+    <!-- 🔐 PASSWORD RESET (ONLY SHOWS ON FIRST LOGIN) -->
+    <section class="panel password-panel">
+        <h3>Change Password</h3>
+
+        <input type="password" id="oldPassword" placeholder="Current password" />
+        <input type="password" id="newPassword" placeholder="New password" />
+
+        <button id="changePasswordBtn">Change Password</button>
+    </section>
+
+    <!-- 📊 STAFF REPORT -->
+    <section class="panel">
+        <h3>My SBU Report</h3>
+
+        <select id="staffReportPeriod">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly" selected>Monthly</option>
+        </select>
+
+        <input type="date" id="staffReportDate" />
+        <button id="loadMyReportBtn">Load Report</button>
+
+        <div id="myReportResult"></div>
+    </section>
+
+    <!-- 📈 DASHBOARD -->
     <section class="panel">
         <h2 id="sbuName">-</h2>
 
@@ -56,13 +67,12 @@
             <span id="performance">0</span>%
         </p>
 
-        <!-- ✅ ADDED -->
         <p>
             <strong>STATUS:</strong>
             <span id="performanceStatus" class="status-pill">-</span>
         </p>
 
-        <hr>
+        <hr />
 
         <h3>EXPENSES</h3>
 
@@ -77,23 +87,23 @@
 
         <p><strong>TOTAL EXPENSES:</strong> ₦<span id="totalExpenses">0</span></p>
 
-        <hr>
+        <hr />
 
         <p><strong>NET PROFIT / LOSS:</strong> ₦<span id="netProfit">0</span></p>
     </section>
 
-    <!-- SALES ENTRY -->
+    <!-- 💰 SALES ENTRY -->
     <section class="panel">
         <h3>Enter Today’s Sales</h3>
 
-        <input type="number" id="salesInput" placeholder="Amount (₦)" min="0">
-        <input type="date" id="salesDate">
-        <input type="text" id="salesNotes" placeholder="Notes (optional)">
+        <input type="number" id="salesInput" placeholder="Amount (₦)" min="0" />
+        <input type="date" id="salesDate" />
+        <input type="text" id="salesNotes" placeholder="Notes (optional)" />
 
         <button id="saveSalesBtn">Save Sales</button>
     </section>
 
-    <!-- EXPENSE ENTRY -->
+    <!-- 💸 EXPENSE ENTRY -->
     <section class="panel">
         <h3>Enter Today’s Expense</h3>
 
@@ -104,14 +114,14 @@
             <option value="miscellaneous">Miscellaneous</option>
         </select>
 
-        <input type="number" id="expenseAmount" placeholder="Amount (₦)" min="0">
-        <input type="date" id="expenseDate">
-        <input type="text" id="expenseNotes" placeholder="Notes (optional)">
+        <input type="number" id="expenseAmount" placeholder="Amount (₦)" min="0" />
+        <input type="date" id="expenseDate" />
+        <input type="text" id="expenseNotes" placeholder="Notes (optional)" />
 
         <button id="saveExpenseBtn">Save Expense</button>
     </section>
 
-    <!-- EXPENSE HISTORY -->
+    <!-- 🧾 EXPENSE HISTORY -->
     <section class="panel">
         <h3>Expense History</h3>
 
@@ -130,17 +140,30 @@
         </table>
     </section>
 
+    <!-- 🕵️ AUDIT LOG -->
+    <section class="panel">
+        <h3>My Activity</h3>
+        <div id="staffAuditLog" class="muted">Loading...</div>
+    </section>
+
 </main>
 
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/staff.js"></script>
-
-</body>
-    <!-- GLOBAL ERROR BANNER -->
+<!-- ❗ GLOBAL ERROR -->
 <div id="globalError" class="error-banner hidden">
     <span id="globalErrorText">Something went wrong</span>
     <button onclick="hideGlobalError()">✕</button>
 </div>
 
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/staff.js"></script>
+
+<!-- ✅ REVEAL PAGE ONLY WHEN READY -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        document.body.classList.add("ready");
+    });
+</script>
+
+</body>
 </html>
