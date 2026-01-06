@@ -39,26 +39,6 @@ function exportToExcel(filename, rows) {
     XLSX.writeFile(workbook, filename);
 }
 
-function exportSBUReportExcel(data, sbuName, period) {
-    const rows = [
-        { Metric: "Total Sales", Value: data.total_sales },
-        { Metric: "Total Expenses", Value: data.total_expenses },
-        { Metric: "Net Profit", Value: data.net_profit },
-        { Metric: "Performance (%)", Value: data.performance_percent }
-    ];
-
-    if (data.staff_breakdown?.length) {
-        data.staff_breakdown.forEach(s => {
-            rows.push({
-                Metric: `Staff: ${s.staff_name}`,
-                Value: `Sales: ₦${s.total_sales}, Expenses: ₦${s.total_expenses}, Net: ₦${s.net_profit}`
-            });
-        });
-    }
-
-    exportToExcel(`${sbuName}_${period}_SBU_Report.xlsx`, rows);
-}
-
 let lastSBUReportData = null;
 let lastStaffReportData = null;
 
@@ -108,12 +88,8 @@ async function loadSBUs() {
     }
 
     const options = sbus.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
-
-    const sbuSelect = document.getElementById("sbuSelect");
-    const reportSBU = document.getElementById("reportSBU");
-
-    if (sbuSelect) sbuSelect.innerHTML = options;
-    if (reportSBU) reportSBU.innerHTML = options;
+    document.getElementById("sbuSelect").innerHTML = options;
+    document.getElementById("reportSBU").innerHTML = options;
 }
 
 // ================= CREATE STAFF =================
@@ -188,12 +164,10 @@ async function loadStaff() {
     });
 
     const staffSelect = document.getElementById("staffReportSelect");
-    if (staffSelect) {
-        const active = staff.filter(s => s.is_active);
-        staffSelect.innerHTML = active.length
-            ? active.map(s => `<option value="${s.id}">${s.full_name}</option>`).join("")
-            : `<option disabled selected>No active staff</option>`;
-    }
+    const active = staff.filter(s => s.is_active);
+    staffSelect.innerHTML = active.length
+        ? active.map(s => `<option value="${s.id}">${s.full_name}</option>`).join("")
+        : `<option disabled selected>No active staff</option>`;
 }
 
 // ================= ACTIVATE / DEACTIVATE =================
@@ -219,18 +193,17 @@ window.activateStaff = activateStaff;
 
 // ================= SBU REPORT =================
 async function loadReport() {
-    const sbuSelect = document.getElementById("reportSBU");
-    const sbuId = sbuSelect.value;
-    const sbuName = sbuSelect.selectedOptions[0]?.text || "SBU";
-    const period = document.getElementById("reportPeriod").value;
-    const date = document.getElementById("reportDate").value;
+    const sbuId = reportSBU.value;
+    const sbuName = reportSBU.selectedOptions[0].text;
+    const period = reportPeriod.value;
+    const date = reportDate.value;
 
     if (!sbuId || !date) {
         showGlobalError("Select SBU and date");
         return;
     }
 
-    const btn = document.getElementById("loadReportBtn");
+    const btn = loadReportBtn;
     setButtonLoading(btn, true);
 
     const data = await safeFetch(
@@ -241,31 +214,34 @@ async function loadReport() {
     setButtonLoading(btn, false);
     if (!data) return;
 
+    if (!data.total_sales && !data.total_expenses) {
+        reportResult.innerHTML = "<p class='muted'>No data available for this period.</p>";
+        return;
+    }
+
     lastSBUReportData = data;
 
-    let html = `
+    reportResult.innerHTML = `
         <h4>${sbuName} — ${period} Report</h4>
         <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
         <p>Total Expenses: ₦${data.total_expenses.toLocaleString()}</p>
         <p>Net Profit: ₦${data.net_profit.toLocaleString()}</p>
         <p>Performance: ${data.performance_percent}%</p>
     `;
-
-    document.getElementById("reportResult").innerHTML = html;
 }
 
 // ================= STAFF SBU REPORT =================
 async function loadStaffSBUReport() {
-    const staffId = document.getElementById("staffReportSelect")?.value;
-    const period = document.getElementById("staffReportPeriod")?.value;
-    const date = document.getElementById("staffReportDate")?.value;
+    const staffId = staffReportSelect.value;
+    const period = staffReportPeriod.value;
+    const date = staffReportDate.value;
 
     if (!staffId || !date) {
         showGlobalError("Select staff and date");
         return;
     }
 
-    const btn = document.getElementById("loadStaffReportBtn");
+    const btn = loadStaffReportBtn;
     setButtonLoading(btn, true);
 
     const data = await safeFetch(
@@ -278,7 +254,7 @@ async function loadStaffSBUReport() {
 
     lastStaffReportData = data;
 
-    document.getElementById("staffReportResult").innerHTML = `
+    staffReportResult.innerHTML = `
         <h4>${data.staff.name} — ${data.sbu.name}</h4>
         <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
         <p>Total Expenses: ₦${data.total_expenses.toLocaleString()}</p>
@@ -287,12 +263,42 @@ async function loadStaffSBUReport() {
     `;
 }
 
+// ================= EXPORT HANDLERS =================
+exportSBUExcelBtn.onclick = () => {
+    if (!lastSBUReportData) {
+        showGlobalError("Load an SBU report first");
+        return;
+    }
+    exportToExcel("SBU_Report.xlsx", lastSBUReportData.staff_breakdown || []);
+};
+
+exportStaffExcelBtn.onclick = () => {
+    if (!lastStaffReportData) {
+        showGlobalError("Load a staff report first");
+        return;
+    }
+    exportToExcel(
+        `${lastStaffReportData.staff.name}_Staff_Report.xlsx`,
+        [
+            { Metric: "Total Sales", Value: lastStaffReportData.total_sales },
+            { Metric: "Total Expenses", Value: lastStaffReportData.total_expenses },
+            { Metric: "Net Profit", Value: lastStaffReportData.net_profit },
+            { Metric: "Performance (%)", Value: lastStaffReportData.performance_percent }
+        ]
+    );
+};
+
+// ================= PASSWORD TOGGLE =================
+toggleStaffPassword.addEventListener("change", () => {
+    staff_password.type = toggleStaffPassword.checked ? "text" : "password";
+});
+
 // ================= INIT =================
 document.addEventListener("DOMContentLoaded", () => {
     loadSBUs();
     loadStaff();
 
-    document.getElementById("saveStaffBtn").onclick = createStaff;
-    document.getElementById("loadReportBtn").onclick = loadReport;
-    document.getElementById("loadStaffReportBtn").onclick = loadStaffSBUReport;
+    saveStaffBtn.onclick = createStaff;
+    loadReportBtn.onclick = loadReport;
+    loadStaffReportBtn.onclick = loadStaffSBUReport;
 });
