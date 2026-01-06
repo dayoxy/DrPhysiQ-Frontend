@@ -158,12 +158,28 @@ function initExpenseSave() {
         alert("Expense saved successfully");
         document.getElementById("expenseAmount").value = "";
         loadStaffDashboard();
+        loadExpenseHistory();
     });
 }
 
-// ---------- INIT ----------
-document.addEventListener("DOMContentLoaded", () => {
-    loadStaffDashboard();
-    initSalesSave();
-    initExpenseSave();
-});
+// ---------- EXPENSE HISTORY ----------
+async function loadExpenseHistory() {
+    try {
+        const res = await fetch(`${API_BASE}/staff/expenses/history`, {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const tbody = document.getElementById("expenseHistoryBody");
+        tbody.innerHTML = "";
+
+        Object.entries(data).forEach(([date, row]) => {
+            const total =
+                (row.consumables || 0) +
+                (row.general_expenses || 0) +
+                (row.utilities || 0) +
+                (row.miscellaneous
