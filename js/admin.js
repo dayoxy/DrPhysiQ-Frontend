@@ -251,7 +251,19 @@ let staffHtml = "<h5>Staff Contributions</h5><table><tr><th>Staff</th><th>Sales<
 
 staffHtml += "</table>";
 
-document.getElementById("reportResult").innerHTML += staffHtml;
+document.getElementById("reportResult").innerHTML += staffHtml;'
+
+async function loadAuditLogs() {
+    const logs = await safeFetch(`${API_BASE}/admin/audit-logs`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!logs) return;
+
+    document.getElementById("auditLog").innerHTML = logs
+        .map(l => `<p><strong>${l.staff}</strong> — ${l.action} (${new Date(l.time).toLocaleString()})</p>`)
+        .join("");
+}
+
 
 
 // ================= INIT =================
