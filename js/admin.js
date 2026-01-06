@@ -236,6 +236,23 @@ async function loadStaffSBUReport() {
         <p>Performance: ${data.performance_percent}%</p>
     `;
 }
+let staffHtml = "<h5>Staff Contributions</h5><table><tr><th>Staff</th><th>Sales</th><th>Expenses</th><th>Net</th></tr>";
+
+(data.staff_breakdown || []).forEach(s => {
+    staffHtml += `
+        <tr>
+            <td>${s.staff_name}</td>
+            <td>₦${(s.total_sales ?? 0).toLocaleString()}</td>
+            <td>₦${(s.total_expenses ?? 0).toLocaleString()}</td>
+            <td>₦${(s.net_profit ?? 0).toLocaleString()}</td>
+        </tr>
+    `;
+});
+
+staffHtml += "</table>";
+
+document.getElementById("reportResult").innerHTML += staffHtml;
+
 
 // ================= INIT =================
 document.addEventListener("DOMContentLoaded", () => {
