@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>DrPhysiQ – Admin Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -36,7 +37,14 @@
 
         <input id="full_name" placeholder="Full name">
         <input id="staff_username" placeholder="Username">
-        <input id="staff_password" placeholder="Password">
+
+        <div class="password-wrapper">
+            <input type="password" id="staff_password" placeholder="Password">
+            <label>
+                <input type="checkbox" id="toggleStaffPassword">
+                Show
+            </label>
+        </div>
 
         <select id="sbuSelect"></select>
 
@@ -73,8 +81,11 @@
         </select>
 
         <input type="date" id="staffReportDate">
-        <button id="loadStaffReportBtn">Load Staff Report</button>
-        <button id="exportStaffExcelBtn">Export Staff Report (Excel)</button>
+
+        <div class="actions">
+            <button id="loadStaffReportBtn">Load Staff Report</button>
+            <button id="exportStaffExcelBtn">Export Staff Report (Excel)</button>
+        </div>
 
         <div id="staffReportResult"></div>
     </section>
@@ -92,19 +103,29 @@
         </select>
 
         <input type="date" id="reportDate">
-        <button id="loadReportBtn">Load Report</button>
-        <button id="exportSBUExcelBtn">Export SBU Report (Excel)</button>
+
+        <div class="actions">
+            <button id="loadReportBtn">Load Report</button>
+            <button id="exportSBUExcelBtn">Export SBU Report (Excel)</button>
+        </div>
 
         <div id="reportResult"></div>
+    </section>
 
-        <canvas id="chart" height="120"></canvas>
+    <!-- AUDIT LOGS -->
+    <section class="panel">
+        <h3>Audit Logs</h3>
+        <div id="auditLog"></div>
     </section>
 
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- LIBRARIES -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- APP SCRIPTS -->
 <script src="js/config.js"></script>
 <script src="js/admin.js"></script>
+
 </body>
 </html>
