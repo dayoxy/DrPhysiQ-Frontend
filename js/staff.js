@@ -220,11 +220,6 @@ async function changePassword() {
     const old_password = document.getElementById("oldPassword").value;
     const new_password = document.getElementById("newPassword").value;
 
-    if (!old_password || !new_password) {
-        showGlobalError("Fill all fields");
-        return;
-    }
-
     const ok = await apiFetch(`${API_BASE}/staff/change-password`, {
         method: "POST",
         headers: {
@@ -234,11 +229,17 @@ async function changePassword() {
         body: JSON.stringify({ old_password, new_password })
     });
 
-    if (ok) {
-        alert("Password changed successfully");
-        localStorage.setItem("must_change_password", "false");
-        location.reload();
-    }
+    if (!ok) return;
+
+    alert("Password changed successfully");
+
+    // ✅ Only update localStorage ONCE
+    localStorage.setItem("must_change_password", "false");
+
+    // ✅ Just hide password panel instead of reload
+    document.body.classList.remove("force-password-reset");
+
+    loadStaffDashboard();
 }
 
 // ================= STAFF AUDIT LOG =================
