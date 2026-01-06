@@ -6,16 +6,26 @@ const role = localStorage.getItem("role");
 const username = localStorage.getItem("username");
 
 if (!token || role !== "admin") {
-    alert("Unauthorized access");
     window.location.href = "index.html";
     throw new Error("Unauthorized");
 }
 
-// ================= HEADER =================
-const adminUserEl = document.getElementById("adminUser");
-if (adminUserEl) {
-    adminUserEl.innerText = "Logged in as: " + username;
+// ================= GLOBAL ERROR =================
+function showGlobalError(message) {
+    const banner = document.getElementById("globalError");
+    const text = document.getElementById("globalErrorText");
+    text.innerText = message;
+    banner.classList.remove("hidden");
+    setTimeout(() => banner.classList.add("hidden"), 5000);
 }
+function hideGlobalError() {
+    document.getElementById("globalError").classList.add("hidden");
+}
+window.hideGlobalError = hideGlobalError;
+
+// ================= HEADER =================
+document.getElementById("adminUser").innerText =
+    "Logged in as: " + username;
 
 // ================= LOAD SBUs =================
 async function loadSBUs() {
@@ -24,60 +34,28 @@ async function loadSBUs() {
     });
 
     if (!res.ok) {
-        alert("Failed to load SBUs");
+        showGlobalError("Failed to load SBUs");
         return;
     }
 
     const sbus = await res.json();
 
-    // Existing output
-    document.getElementById("output").innerHTML =
-        sbus.map(s => `<p>${s.name} – ₦${s.daily_budget.toLocaleString()}</p>`).join("");
-
-    // ✅ ADD THIS (report dropdown)
+    const output = document.getElementById("output");
     const reportSBU = document.getElementById("reportSBU");
-    if (reportSBU) {
-        reportSBU.innerHTML = sbus
-            .map(s => `<option value="${s.id}">${s.name}</option>`)
-            .join("");
-    }
-}
+    const sbuSelect = document.getElementById("sbuSelect");
 
-
-// ================= CREATE STAFF MODAL =================
-function openCreateStaff() {
-    document.getElementById("modal").innerHTML = `
-        <h3>Create Staff</h3>
-
-        <input id="full_name" placeholder="Full name" />
-        <input id="staff_username" placeholder="Username" />
-        <input id="staff_password" placeholder="Password" />
-
-        <select id="sbuSelect"></select>
-
-        <button id="saveStaffBtn">Save</button>
-    `;
-
-    loadSBUOptions();
-
-    document
-        .getElementById("saveStaffBtn")
-        .addEventListener("click", createStaff);
-}
-
-// ================= LOAD SBU OPTIONS =================
-async function loadSBUOptions() {
-    const res = await fetch(`${API_BASE}/admin/sbus`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!res.ok) {
-        alert("Failed to load SBU list");
+    if (sbus.length === 0) {
+        output.innerHTML = "<p class='empty'>No SBUs created yet</p>";
         return;
     }
 
-    const sbus = await res.json();
-    const sbuSelect = document.getElementById("sbuSelect");
+    output.innerHTML = sbus
+        .map(s => `<p>${s.name} – ₦${s.daily_budget.toLocaleString()}</p>`)
+        .join("");
+
+    reportSBU.innerHTML = sbus
+        .map(s => `<option value="${s.id}">${s.name}</option>`)
+        .join("");
 
     sbuSelect.innerHTML = sbus
         .map(s => `<option value="${s.id}">${s.name}</option>`)
@@ -90,11 +68,11 @@ async function createStaff() {
         full_name: document.getElementById("full_name").value.trim(),
         username: document.getElementById("staff_username").value.trim(),
         password: document.getElementById("staff_password").value,
-        department_id: document.getElementById("sbuSelect").value
+        sbu_id: document.getElementById("sbuSelect").value
     };
 
     if (!payload.full_name || !payload.username || !payload.password) {
-        alert("Fill all fields");
+        showGlobalError("Fill all fields");
         return;
     }
 
@@ -108,68 +86,126 @@ async function createStaff() {
     });
 
     if (!res.ok) {
-        const err = await res.text();
-        console.error(err);
-        alert("Failed to create staff");
+        showGlobalError("Failed to create staff");
         return;
     }
 
-    alert("Staff created successfully");
+    loadStaff();
 }
 
-// ================= LOAD REPORT =================
-document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById("loadReportBtn");
-    if (!btn) return;
-
-    btn.addEventListener("click", async () => {
-        const sbuId = document.getElementById("reportSBU").value;
-        const period = document.getElementById("reportPeriod").value;
-        const date = document.getElementById("reportDate").value;
-
-        if (!sbuId || !date) {
-            alert("Select SBU and date");
-            return;
-        }
-
-        const res = await fetch(
-            `${API_BASE}/admin/sbu-report?sbu_id=${sbuId}&period=${period}&report_date=${date}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            }
-        );
-
-        if (!res.ok) {
-            alert("Failed to load report");
-            return;
-        }
-
-        const data = await res.json();
-
-        document.getElementById("reportResult").innerHTML = `
-            <h4>${data.sbu.name}</h4>
-            <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
-            <p>Total Expenses: ₦${data.expenses.total.toLocaleString()}</p>
-            <p>Net Profit: ₦${data.net_profit.toLocaleString()}</p>
-            <p>Performance: ${data.performance_percent}%</p>
-        `;
+// ================= LOAD STAFF =================
+async function loadStaff() {
+    const res = await fetch(`${API_BASE}/admin/staff`, {
+        headers: { Authorization: `Bearer ${token}` }
     });
-});
 
+    if (!res.ok) {
+        showGlobalError("Failed to load staff");
+        return;
+    }
 
+    const staff = await res.json();
+    const tbody = document.getElementById("staffTable");
+    tbody.innerHTML = "";
+
+    if (staff.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4">No staff yet</td></tr>`;
+        return;
+    }
+
+    staff.forEach(u => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${u.full_name}</td>
+            <td>${u.username}</td>
+            <td>${u.sbu_id || "-"}</td>
+            <td>
+                <button onclick="deleteStaff('${u.id}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// ================= DELETE STAFF =================
+async function deleteStaff(id) {
+    if (!confirm("Delete this staff member?")) return;
+
+    const res = await fetch(`${API_BASE}/admin/staff/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+        showGlobalError("Failed to delete staff");
+        return;
+    }
+
+    loadStaff();
+}
+
+// ================= REPORT + CHART =================
+let chart;
+
+async function loadReport() {
+    const sbuId = document.getElementById("reportSBU").value;
+    const period = document.getElementById("reportPeriod").value;
+    const date = document.getElementById("reportDate").value;
+
+    if (!sbuId || !date) {
+        showGlobalError("Select SBU and date");
+        return;
+    }
+
+    const res = await fetch(
+        `${API_BASE}/admin/sbu-report?sbu_id=${sbuId}&period=${period}&report_date=${date}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!res.ok) {
+        showGlobalError("Failed to load report");
+        return;
+    }
+
+    const data = await res.json();
+
+    document.getElementById("reportResult").innerHTML = `
+        <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
+        <p>Total Expenses: ₦${data.total_expenses.toLocaleString()}</p>
+        <p>Net Profit: ₦${data.net_profit.toLocaleString()}</p>
+        <p>Performance: ${data.performance_percent}%</p>
+    `;
+
+    renderChart(data.total_sales, data.total_expenses);
+}
+
+function renderChart(sales, expenses) {
+    const ctx = document.getElementById("chart");
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: ["Sales", "Expenses"],
+            datasets: [{
+                data: [sales, expenses],
+                backgroundColor: ["#4caf50", "#f44336"]
+            }]
+        }
+    });
+}
 
 // ================= INIT =================
-document.addEventListener("DOMContentLoaded", loadSBUs);
-
+document.addEventListener("DOMContentLoaded", () => {
+    loadSBUs();
+    loadStaff();
+    document.getElementById("saveStaffBtn").onclick = createStaff;
+    document.getElementById("loadReportBtn").onclick = loadReport;
+});
 
 // ================= LOGOUT =================
 function logout() {
     localStorage.clear();
     window.location.href = "index.html";
 }
-
-// expose globally for onclick
 window.logout = logout;
-
