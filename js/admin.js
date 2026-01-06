@@ -118,6 +118,8 @@ async function loadStaff() {
     });
     if (!staff) return;
 
+    console.log("Staff API response:", staff);
+
     // ---------- STAFF TABLE ----------
     const tbody = document.getElementById("staffList");
     tbody.innerHTML = "";
@@ -143,18 +145,20 @@ async function loadStaff() {
         tbody.appendChild(tr);
     });
 
-    // ---------- STAFF REPORT DROPDOWN ----------
+    // ---------- STAFF REPORT DROPDOWN (THIS WAS MISSING) ----------
     const staffSelect = document.getElementById("staffReportSelect");
-    if (staffSelect) {
-        staffSelect.innerHTML = staff
-            .filter(s => s.is_active)
-            .map(s => `<option value="${s.id}">${s.full_name}</option>`)
-            .join("");
-
-        if (!staffSelect.innerHTML) {
-            staffSelect.innerHTML = `<option disabled selected>No active staff</option>`;
-        }
+    if (!staffSelect) {
+        console.error("staffReportSelect not found");
+        return;
     }
+
+    const activeStaff = staff.filter(s => s.is_active === true);
+
+    staffSelect.innerHTML = activeStaff.length
+        ? activeStaff.map(s =>
+            `<option value="${s.id}">${s.full_name}</option>`
+          ).join("")
+        : `<option disabled selected>No active staff</option>`;
 }
 
 // ================= ACTIVATE / DEACTIVATE STAFF =================
@@ -270,4 +274,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("saveStaffBtn").onclick = createStaff;
     document.getElementById("loadReportBtn").onclick = loadReport;
+     document.getElementById("loadStaffReportBtn").onclick = loadStaffSBUReport;
 });
