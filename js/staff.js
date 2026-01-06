@@ -162,6 +162,17 @@ function initExpenseSave() {
     });
 }
 
+// ---------- AUTO-FILL TODAY'S DATE ----------
+function setTodayDate() {
+    const today = new Date().toISOString().split("T")[0];
+
+    const salesDate = document.getElementById("salesDate");
+    const expenseDate = document.getElementById("expenseDate");
+
+    if (salesDate) salesDate.value = today;
+    if (expenseDate) expenseDate.value = today;
+}
+
 // ---------- EXPENSE HISTORY ----------
 async function loadExpenseHistory() {
     try {
@@ -182,4 +193,30 @@ async function loadExpenseHistory() {
                 (row.consumables || 0) +
                 (row.general_expenses || 0) +
                 (row.utilities || 0) +
-                (row.miscellaneous
+                (row.miscellaneous || 0);
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${date}</td>
+                <td>${row.consumables || 0}</td>
+                <td>${row.general_expenses || 0}</td>
+                <td>${row.utilities || 0}</td>
+                <td>${row.miscellaneous || 0}</td>
+                <td><strong>${total}</strong></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+    } catch (err) {
+        console.error("Failed to load expense history", err);
+    }
+}
+
+// ---------- INIT ----------
+document.addEventListener("DOMContentLoaded", () => {
+    setTodayDate();
+    loadStaffDashboard();
+    initSalesSave();
+    initExpenseSave();
+    loadExpenseHistory();
+});
