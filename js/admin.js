@@ -31,6 +31,37 @@ function setButtonLoading(btn, loading, text = "Loading...") {
     btn.innerText = loading ? text : btn.dataset.originalText;
 }
 
+// ================= EXCEL EXPORT =================
+function exportToExcel(filename, rows) {
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
+    XLSX.writeFile(workbook, filename);
+}
+
+function exportSBUReportExcel(data, sbuName, period) {
+    const rows = [
+        { Metric: "Total Sales", Value: data.total_sales },
+        { Metric: "Total Expenses", Value: data.total_expenses },
+        { Metric: "Net Profit", Value: data.net_profit },
+        { Metric: "Performance (%)", Value: data.performance_percent }
+    ];
+
+    if (data.staff_breakdown?.length) {
+        data.staff_breakdown.forEach(s => {
+            rows.push({
+                Metric: `Staff: ${s.staff_name}`,
+                Value: `Sales: ₦${s.total_sales}, Expenses: ₦${s.total_expenses}, Net: ₦${s.net_profit}`
+            });
+        });
+    }
+
+    exportToExcel(`${sbuName}_${period}_SBU_Report.xlsx`, rows);
+}
+
+let lastSBUReportData = null;
+let lastStaffReportData = null;
+
 // ================= HEADER =================
 const adminUserEl = document.getElementById("adminUser");
 if (adminUserEl) adminUserEl.innerText = `Logged in as: ${username}`;
@@ -76,9 +107,7 @@ async function loadSBUs() {
             : "<p class='muted'>No SBUs found</p>";
     }
 
-    const options = sbus
-        .map(s => `<option value="${s.id}">${s.name}</option>`)
-        .join("");
+    const options = sbus.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
 
     const sbuSelect = document.getElementById("sbuSelect");
     const reportSBU = document.getElementById("reportSBU");
@@ -134,7 +163,6 @@ async function loadStaff() {
     });
     if (!staff) return;
 
-    // ---- Table ----
     const tbody = document.getElementById("staffList");
     tbody.innerHTML = "";
 
@@ -159,10 +187,9 @@ async function loadStaff() {
         tbody.appendChild(tr);
     });
 
-    // ---- Staff Report Dropdown ----
     const staffSelect = document.getElementById("staffReportSelect");
     if (staffSelect) {
-        const active = staff.filter(s => s.is_active === true);
+        const active = staff.filter(s => s.is_active);
         staffSelect.innerHTML = active.length
             ? active.map(s => `<option value="${s.id}">${s.full_name}</option>`).join("")
             : `<option disabled selected>No active staff</option>`;
@@ -214,38 +241,15 @@ async function loadReport() {
     setButtonLoading(btn, false);
     if (!data) return;
 
-    const {
-        total_sales = 0,
-        total_expenses = 0,
-        net_profit = 0,
-        performance_percent = 0,
-        staff_breakdown = []
-    } = data;
+    lastSBUReportData = data;
 
     let html = `
         <h4>${sbuName} — ${period} Report</h4>
-        <p>Total Sales: ₦${total_sales.toLocaleString()}</p>
-        <p>Total Expenses: ₦${total_expenses.toLocaleString()}</p>
-        <p>Net Profit: ₦${net_profit.toLocaleString()}</p>
-        <p>Performance: ${performance_percent}%</p>
+        <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
+        <p>Total Expenses: ₦${data.total_expenses.toLocaleString()}</p>
+        <p>Net Profit: ₦${data.net_profit.toLocaleString()}</p>
+        <p>Performance: ${data.performance_percent}%</p>
     `;
-
-    if (staff_breakdown.length) {
-        html += `
-            <h5>Staff Contributions</h5>
-            <table>
-                <tr><th>Staff</th><th>Sales</th><th>Expenses</th><th>Net</th></tr>
-                ${staff_breakdown.map(s => `
-                    <tr>
-                        <td>${s.staff_name}</td>
-                        <td>₦${(s.total_sales ?? 0).toLocaleString()}</td>
-                        <td>₦${(s.total_expenses ?? 0).toLocaleString()}</td>
-                        <td>₦${(s.net_profit ?? 0).toLocaleString()}</td>
-                    </tr>
-                `).join("")}
-            </table>
-        `;
-    }
 
     document.getElementById("reportResult").innerHTML = html;
 }
@@ -272,36 +276,21 @@ async function loadStaffSBUReport() {
     setButtonLoading(btn, false);
     if (!data) return;
 
+    lastStaffReportData = data;
+
     document.getElementById("staffReportResult").innerHTML = `
         <h4>${data.staff.name} — ${data.sbu.name}</h4>
-        <p>Total Sales: ₦${(data.total_sales ?? 0).toLocaleString()}</p>
-        <p>Total Expenses: ₦${(data.total_expenses ?? 0).toLocaleString()}</p>
-        <p>Net Profit: ₦${(data.net_profit ?? 0).toLocaleString()}</p>
-        <p>Performance: ${data.performance_percent ?? 0}%</p>
+        <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
+        <p>Total Expenses: ₦${data.total_expenses.toLocaleString()}</p>
+        <p>Net Profit: ₦${data.net_profit.toLocaleString()}</p>
+        <p>Performance: ${data.performance_percent}%</p>
     `;
-}
-
-// ================= AUDIT LOGS =================
-async function loadAuditLogs() {
-    const container = document.getElementById("auditLog");
-    if (!container) return;
-
-    const logs = await safeFetch(`${API_BASE}/admin/audit-logs`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
-
-    container.innerHTML = logs?.length
-        ? logs.map(l =>
-            `<p><strong>${l.staff}</strong> — ${l.action} (${new Date(l.time).toLocaleString()})</p>`
-          ).join("")
-        : "<p class='muted'>No activity yet</p>";
 }
 
 // ================= INIT =================
 document.addEventListener("DOMContentLoaded", () => {
     loadSBUs();
     loadStaff();
-    loadAuditLogs();
 
     document.getElementById("saveStaffBtn").onclick = createStaff;
     document.getElementById("loadReportBtn").onclick = loadReport;
