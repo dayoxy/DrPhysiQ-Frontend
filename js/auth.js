@@ -64,7 +64,9 @@ async function apiFetch(url, options = {}) {
         if (res.status === 401) {
             showGlobalError("Session expired. Please log in again.");
             localStorage.clear();
-            setTimeout(() => window.location.href = "index.html", 1500);
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 1500);
             return null;
         }
 
@@ -74,20 +76,26 @@ async function apiFetch(url, options = {}) {
             return null;
         }
 
-        // Server error
+        // Other errors
         if (!res.ok) {
-            const text = await res.text();
-            showGlobalError(text || "Server error occurred");
+            let err;
+            try {
+                err = await res.json();
+            } catch {
+                err = {};
+            }
+            showGlobalError(err.detail || "Server error occurred");
             return null;
         }
 
-        return res;
+        // ✅ ALWAYS return parsed JSON
+        return await res.json();
+
     } catch (err) {
         showGlobalError("Network error. Check your connection.");
         return null;
     }
 }
-
 
 function getToken() {
     return localStorage.getItem("token");
