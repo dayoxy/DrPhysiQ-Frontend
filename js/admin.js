@@ -265,6 +265,18 @@ async function loadStaffSBUReport() {
     `;
 }
 
+async function deleteStaff(id) {
+    if (!confirm("This will permanently delete the staff account. Continue?")) return;
+
+    const ok = await safeFetch(`${API_BASE}/admin/staff/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (ok) loadStaff();
+}
+
+window.deleteStaff = deleteStaff;
 // ================= EXPORT HANDLERS =================
 exportSBUExcelBtn.onclick = () => {
     if (!lastSBUReportData) {
