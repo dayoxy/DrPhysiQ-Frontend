@@ -17,7 +17,7 @@ function logout() {
 }
 window.logout = logout;
 
-// ================= PASSWORD RESET ENFORCEMENT =================
+// ================= PASSWORD RESET =================
 function enforcePasswordReset() {
     document.body.classList.add("force-password-reset");
 
@@ -31,8 +31,12 @@ function enforcePasswordReset() {
 // ================= AUTO DATE =================
 function setTodayDate() {
     const today = new Date().toISOString().split("T")[0];
-    document.getElementById("salesDate")?.value = today;
-    document.getElementById("expenseDate")?.value = today;
+
+    const salesDate = document.getElementById("salesDate");
+    if (salesDate) salesDate.value = today;
+
+    const expenseDate = document.getElementById("expenseDate");
+    if (expenseDate) expenseDate.value = today;
 }
 
 // ================= DASHBOARD =================
@@ -48,7 +52,9 @@ async function loadStaffDashboard() {
         return;
     }
 
-    const { sbu, fixed_costs = {}, variable_costs = {} } = data;
+    const fixed = data.fixed_costs || {};
+    const variable = data.variable_costs || {};
+    const sbu = data.sbu;
 
     document.getElementById("staffName").innerText = username;
     document.getElementById("sbuName").innerText = sbu.name;
@@ -83,20 +89,20 @@ async function loadStaffDashboard() {
     }
 
     document.getElementById("personnel").innerText =
-        (fixed_costs.personnel_cost || 0).toLocaleString();
+        (fixed.personnel_cost || 0).toLocaleString();
     document.getElementById("rent").innerText =
-        (fixed_costs.rent || 0).toLocaleString();
+        (fixed.rent || 0).toLocaleString();
     document.getElementById("electricity").innerText =
-        (fixed_costs.electricity || 0).toLocaleString();
+        (fixed.electricity || 0).toLocaleString();
 
     document.getElementById("consumables").innerText =
-        (variable_costs.consumables || 0).toLocaleString();
+        (variable.consumables || 0).toLocaleString();
     document.getElementById("generalExpenses").innerText =
-        (variable_costs.general_expenses || 0).toLocaleString();
+        (variable.general_expenses || 0).toLocaleString();
     document.getElementById("utilities").innerText =
-        (variable_costs.utilities || 0).toLocaleString();
+        (variable.utilities || 0).toLocaleString();
     document.getElementById("miscellaneous").innerText =
-        (variable_costs.miscellaneous || 0).toLocaleString();
+        (variable.miscellaneous || 0).toLocaleString();
 }
 
 // ================= SALES =================
@@ -192,9 +198,11 @@ async function changePassword() {
     alert("Password changed successfully");
 
     localStorage.setItem("must_change_password", "false");
-
     document.body.classList.remove("force-password-reset");
-    document.querySelectorAll(".panel").forEach(p => (p.style.display = "block"));
+
+    document.querySelectorAll(".panel").forEach(p => {
+        p.style.display = "block";
+    });
 
     loadStaffDashboard();
 }
@@ -211,14 +219,9 @@ async function loadStaffAuditLogs() {
     if (!logs) return;
 
     container.innerHTML = logs.length
-        ? logs
-              .map(
-                  l =>
-                      `<p>${l.action} — ${new Date(
-                          l.time
-                      ).toLocaleString()}</p>`
-              )
-              .join("")
+        ? logs.map(l =>
+            `<p>${l.action} — ${new Date(l.time).toLocaleString()}</p>`
+        ).join("")
         : "<p class='muted'>No activity yet</p>";
 }
 
