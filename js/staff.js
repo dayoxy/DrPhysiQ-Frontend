@@ -119,26 +119,30 @@ function initSalesSave() {
         const notes = document.getElementById("salesNotes")?.value || "";
 
         if (!amount || amount <= 0 || !sale_date) {
-            alert("Enter valid sales amount and date");
+            showGlobalError("Enter valid sales amount and date");
             return;
         }
 
-        const res = await fetch(`${API_BASE}/staff/sales`, {
+        // 🔒 Disable button
+        btn.disabled = true;
+        btn.innerText = "Saving...";
+
+        const res = await apiFetch(`${API_BASE}/staff/sales`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({ amount, sale_date, notes })
         });
 
-        if (!res.ok) {
-            const err = await res.json();
-            alert(err.detail || "Failed to save sales");
-            return;
-        }
+        // 🔓 Re-enable button
+        btn.disabled = false;
+        btn.innerText = "Save Sales";
 
-        alert("Sales saved successfully");
+        if (!res) return;
+
+        showGlobalError("Sales saved successfully");
         document.getElementById("salesInput").value = "";
         loadStaffDashboard();
     });
