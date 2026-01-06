@@ -25,25 +25,27 @@ function enforcePasswordReset() {
 
     document.body.classList.add("force-password-reset");
 
-    const sections = document.querySelectorAll(
-        ".panel:not(.password-panel)"
-    );
-    sections.forEach(el => (el.style.display = "none"));
+    // Hide all panels except password panel
+    const panels = document.querySelectorAll(".panel");
+    panels.forEach(panel => {
+        if (!panel.classList.contains("password-panel")) {
+            panel.style.display = "none";
+        }
+    });
 }
-localStorage.setItem("must_change_password", "false");
-location.reload();
-
 
 // ================= AUTO-FILL TODAY =================
 function setTodayDate() {
     const today = new Date().toISOString().split("T")[0];
-    if (document.getElementById("salesDate"))
-        document.getElementById("salesDate").value = today;
-    if (document.getElementById("expenseDate"))
-        document.getElementById("expenseDate").value = today;
+
+    const salesDate = document.getElementById("salesDate");
+    const expenseDate = document.getElementById("expenseDate");
+
+    if (salesDate) salesDate.value = today;
+    if (expenseDate) expenseDate.value = today;
 }
 
-// ================= DASHBOARD =================
+// ================= LOAD STAFF DASHBOARD =================
 async function loadStaffDashboard() {
     const data = await apiFetch(`${API_BASE}/staff/my-sbu`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -70,6 +72,7 @@ async function loadStaffDashboard() {
     document.getElementById("performance").innerText =
         (data.performance_percent || 0) + "%";
 
+    // Performance badge
     const perfEl = document.getElementById("performanceStatus");
     if (perfEl) {
         perfEl.innerText = data.performance_status;
@@ -79,9 +82,11 @@ async function loadStaffDashboard() {
             perfEl.classList.add("status-good");
         else if (data.performance_status === "warning")
             perfEl.classList.add("status-warn");
-        else perfEl.classList.add("status-bad");
+        else
+            perfEl.classList.add("status-bad");
     }
 
+    // Fixed costs
     document.getElementById("personnel").innerText =
         (fixed_costs.personnel_cost || 0).toLocaleString();
     document.getElementById("rent").innerText =
@@ -89,6 +94,7 @@ async function loadStaffDashboard() {
     document.getElementById("electricity").innerText =
         (fixed_costs.electricity || 0).toLocaleString();
 
+    // Variable costs
     document.getElementById("consumables").innerText =
         (variable_costs.consumables || 0).toLocaleString();
     document.getElementById("generalExpenses").innerText =
@@ -227,7 +233,7 @@ async function changePassword() {
     }
 }
 
-// ================= AUDIT LOGS =================
+// ================= STAFF AUDIT LOG =================
 async function loadStaffAuditLogs() {
     const container = document.getElementById("staffAuditLog");
     if (!container) return;
