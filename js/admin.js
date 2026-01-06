@@ -274,5 +274,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("saveStaffBtn").onclick = createStaff;
     document.getElementById("loadReportBtn").onclick = loadReport;
-     document.getElementById("loadStaffReportBtn").onclick = loadStaffSBUReport;
+    document.getElementById("loadStaffReportBtn").onclick = loadStaffSBUReport;
 });
