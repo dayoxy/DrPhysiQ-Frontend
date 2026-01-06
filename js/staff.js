@@ -50,12 +50,22 @@ async function loadStaffDashboard() {
     const data = await apiFetch(`${API_BASE}/staff/my-sbu`, {
         headers: { Authorization: `Bearer ${token}` }
     });
-    if (!data) return;
 
-    const { sbu, fixed_costs = {}, variable_costs = {} } = data;
+    console.log("Staff dashboard data:", data);
+
+    if (!data || !data.sbu) {
+        showGlobalError(
+            "Your account is not linked to an SBU. Please contact admin."
+        );
+        return;
+    }
+
+    const sbu = data.sbu;
+    const fixed = data.fixed_costs || {};
+    const variable = data.variable_costs || {};
 
     document.getElementById("staffName").innerText = username;
-    document.getElementById("sbuName").innerText = sbu.name;
+    document.getElementById("sbuName").innerText = sbu.name ?? "-";
 
     document.getElementById("dailyBudget").innerText =
         (sbu.daily_budget || 0).toLocaleString();
@@ -72,37 +82,35 @@ async function loadStaffDashboard() {
     document.getElementById("performance").innerText =
         (data.performance_percent || 0) + "%";
 
-    // Performance badge
     const perfEl = document.getElementById("performanceStatus");
     if (perfEl) {
-        perfEl.innerText = data.performance_status;
+        perfEl.innerText = data.performance_status || "-";
         perfEl.className = "status-pill";
 
-        if (data.performance_status === "Excellent")
+        if (data.performance_status === "Excellent") {
             perfEl.classList.add("status-good");
-        else if (data.performance_status === "warning")
+        } else if (data.performance_status === "warning") {
             perfEl.classList.add("status-warn");
-        else
+        } else {
             perfEl.classList.add("status-bad");
+        }
     }
 
-    // Fixed costs
     document.getElementById("personnel").innerText =
-        (fixed_costs.personnel_cost || 0).toLocaleString();
+        (fixed.personnel_cost || 0).toLocaleString();
     document.getElementById("rent").innerText =
-        (fixed_costs.rent || 0).toLocaleString();
+        (fixed.rent || 0).toLocaleString();
     document.getElementById("electricity").innerText =
-        (fixed_costs.electricity || 0).toLocaleString();
+        (fixed.electricity || 0).toLocaleString();
 
-    // Variable costs
     document.getElementById("consumables").innerText =
-        (variable_costs.consumables || 0).toLocaleString();
+        (variable.consumables || 0).toLocaleString();
     document.getElementById("generalExpenses").innerText =
-        (variable_costs.general_expenses || 0).toLocaleString();
+        (variable.general_expenses || 0).toLocaleString();
     document.getElementById("utilities").innerText =
-        (variable_costs.utilities || 0).toLocaleString();
+        (variable.utilities || 0).toLocaleString();
     document.getElementById("miscellaneous").innerText =
-        (variable_costs.miscellaneous || 0).toLocaleString();
+        (variable.miscellaneous || 0).toLocaleString();
 }
 
 // ================= SAVE SALES =================
