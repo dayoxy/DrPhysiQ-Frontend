@@ -31,8 +31,12 @@ function enforcePasswordReset() {
 // ================= AUTO DATE =================
 function setTodayDate() {
     const today = new Date().toISOString().split("T")[0];
-    document.getElementById("salesDate")?.value = today;
-    document.getElementById("expenseDate")?.value = today;
+
+    const salesDate = document.getElementById("salesDate");
+    if (salesDate) salesDate.value = today;
+
+    const expenseDate = document.getElementById("expenseDate");
+    if (expenseDate) expenseDate.value = today;
 }
 
 // ================= DASHBOARD =================
