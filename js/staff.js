@@ -22,21 +22,17 @@ function enforcePasswordReset() {
     document.body.classList.add("force-password-reset");
 
     document.querySelectorAll(".panel").forEach(panel => {
-        if (!panel.classList.contains("password-panel")) {
-            panel.style.display = "none";
-        }
+        panel.style.display = panel.classList.contains("password-panel")
+            ? "block"
+            : "none";
     });
 }
 
 // ================= AUTO DATE =================
 function setTodayDate() {
     const today = new Date().toISOString().split("T")[0];
-
-    const salesDate = document.getElementById("salesDate");
-    if (salesDate) salesDate.value = today;
-
-    const expenseDate = document.getElementById("expenseDate");
-    if (expenseDate) expenseDate.value = today;
+    document.getElementById("salesDate")?.value = today;
+    document.getElementById("expenseDate")?.value = today;
 }
 
 // ================= DASHBOARD =================
@@ -45,16 +41,12 @@ async function loadStaffDashboard() {
         headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!data) return;
-
-    if (!data.sbu) {
+    if (!data || !data.sbu) {
         showGlobalError("Your account is not linked to an SBU.");
         return;
     }
 
-    const fixed = data.fixed_costs || {};
-    const variable = data.variable_costs || {};
-    const sbu = data.sbu;
+    const { sbu, fixed_costs = {}, variable_costs = {} } = data;
 
     document.getElementById("staffName").innerText = username;
     document.getElementById("sbuName").innerText = sbu.name;
@@ -76,33 +68,65 @@ async function loadStaffDashboard() {
 
     const statusEl = document.getElementById("performanceStatus");
     if (statusEl) {
-        statusEl.innerText = data.performance_status || "-";
+        statusEl.innerText = data.performance_status;
         statusEl.className = "status-pill";
-
-        if (data.performance_status === "Excellent") {
-            statusEl.classList.add("status-good");
-        } else if (data.performance_status === "warning") {
-            statusEl.classList.add("status-warn");
-        } else {
-            statusEl.classList.add("status-bad");
-        }
+        statusEl.classList.add(
+            data.performance_status === "Excellent"
+                ? "status-good"
+                : data.performance_status === "warning"
+                ? "status-warn"
+                : "status-bad"
+        );
     }
 
     document.getElementById("personnel").innerText =
-        (fixed.personnel_cost || 0).toLocaleString();
+        (fixed_costs.personnel_cost || 0).toLocaleString();
     document.getElementById("rent").innerText =
-        (fixed.rent || 0).toLocaleString();
+        (fixed_costs.rent || 0).toLocaleString();
     document.getElementById("electricity").innerText =
-        (fixed.electricity || 0).toLocaleString();
+        (fixed_costs.electricity || 0).toLocaleString();
 
     document.getElementById("consumables").innerText =
-        (variable.consumables || 0).toLocaleString();
+        (variable_costs.consumables || 0).toLocaleString();
     document.getElementById("generalExpenses").innerText =
-        (variable.general_expenses || 0).toLocaleString();
+        (variable_costs.general_expenses || 0).toLocaleString();
     document.getElementById("utilities").innerText =
-        (variable.utilities || 0).toLocaleString();
+        (variable_costs.utilities || 0).toLocaleString();
     document.getElementById("miscellaneous").innerText =
-        (variable.miscellaneous || 0).toLocaleString();
+        (variable_costs.miscellaneous || 0).toLocaleString();
+}
+
+// ================= EXPENSE HISTORY =================
+async function loadExpenseHistory() {
+    const tbody = document.getElementById("expenseHistoryBody");
+    if (!tbody) return;
+
+    const history = await apiFetch(`${API_BASE}/staff/expenses/history`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!history) return;
+
+    tbody.innerHTML = "";
+
+    Object.entries(history).forEach(([date, row]) => {
+        const total =
+            row.consumables +
+            row.general_expenses +
+            row.utilities +
+            row.miscellaneous;
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${date}</td>
+                <td>₦${row.consumables.toLocaleString()}</td>
+                <td>₦${row.general_expenses.toLocaleString()}</td>
+                <td>₦${row.utilities.toLocaleString()}</td>
+                <td>₦${row.miscellaneous.toLocaleString()}</td>
+                <td><strong>₦${total.toLocaleString()}</strong></td>
+            </tr>
+        `;
+    });
 }
 
 // ================= SALES =================
@@ -115,7 +139,7 @@ function initSalesSave() {
         const sale_date = document.getElementById("salesDate").value;
         const notes = document.getElementById("salesNotes")?.value || "";
 
-        if (!amount || amount <= 0 || !sale_date) {
+        if (!amount || !sale_date) {
             showGlobalError("Enter valid sales details");
             return;
         }
@@ -135,7 +159,10 @@ function initSalesSave() {
         btn.disabled = false;
         btn.innerText = "Save Sales";
 
-        if (ok) loadStaffDashboard();
+        if (ok) {
+            loadStaffDashboard();
+            loadExpenseHistory();
+        }
     };
 }
 
@@ -150,7 +177,7 @@ function initExpenseSave() {
         const date = document.getElementById("expenseDate").value;
         const notes = document.getElementById("expenseNotes")?.value || "";
 
-        if (!amount || amount <= 0 || !date) {
+        if (!amount || !date) {
             showGlobalError("Enter valid expense details");
             return;
         }
@@ -170,41 +197,11 @@ function initExpenseSave() {
         btn.disabled = false;
         btn.innerText = "Save Expense";
 
-        if (ok) loadStaffDashboard();
+        if (ok) {
+            loadStaffDashboard();
+            loadExpenseHistory();
+        }
     };
-}
-
-// ================= CHANGE PASSWORD =================
-async function changePassword() {
-    const old_password = document.getElementById("oldPassword").value;
-    const new_password = document.getElementById("newPassword").value;
-
-    if (!old_password || !new_password) {
-        showGlobalError("Fill all fields");
-        return;
-    }
-
-    const ok = await apiFetch(`${API_BASE}/staff/change-password`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ old_password, new_password })
-    });
-
-    if (!ok) return;
-
-    alert("Password changed successfully");
-
-    localStorage.setItem("must_change_password", "false");
-    document.body.classList.remove("force-password-reset");
-
-    document.querySelectorAll(".panel").forEach(p => {
-        p.style.display = "block";
-    });
-
-    loadStaffDashboard();
 }
 
 // ================= AUDIT LOG =================
@@ -216,12 +213,15 @@ async function loadStaffAuditLogs() {
         headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!logs) return;
-
-    container.innerHTML = logs.length
-        ? logs.map(l =>
-            `<p>${l.action} — ${new Date(l.time).toLocaleString()}</p>`
-        ).join("")
+    container.innerHTML = logs?.length
+        ? logs
+              .map(
+                  l =>
+                      `<p>${l.action} — ${new Date(
+                          l.time
+                      ).toLocaleString()}</p>`
+              )
+              .join("")
         : "<p class='muted'>No activity yet</p>";
 }
 
@@ -231,10 +231,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     setTodayDate();
 
-    const mustChange =
-        localStorage.getItem("must_change_password") === "true";
-
-    if (mustChange) {
+    if (localStorage.getItem("must_change_password") === "true") {
         enforcePasswordReset();
         document
             .getElementById("changePasswordBtn")
@@ -244,14 +241,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     await loadStaffDashboard();
+    loadExpenseHistory();
     loadStaffAuditLogs();
 
     initSalesSave();
     initExpenseSave();
-
-    document
-        .getElementById("changePasswordBtn")
-        ?.addEventListener("click", changePassword);
 
     document.body.classList.add("ready");
 });
