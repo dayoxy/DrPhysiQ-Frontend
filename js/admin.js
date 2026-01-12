@@ -292,7 +292,7 @@ async function createSBU() {
         return;
     }
 
-    const ok = await apiFetch(`${API_BASE}/admin/create-sbu`, {
+    const ok = await safeFetch(`${API_BASE}/admin/create-sbu`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
