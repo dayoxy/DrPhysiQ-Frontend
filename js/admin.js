@@ -109,12 +109,19 @@ async function loadSBUs() {
 
 // ================= LOAD STAFF =================
 async function loadStaff() {
+    const tbody = document.getElementById("staffList");
+
+    if (!tbody) {
+        console.error("staffList tbody not found");
+        return;
+    }
+
     const staff = await safeFetch(`${API_BASE}/admin/staff`, {
         headers: { Authorization: `Bearer ${token}` }
     });
+
     if (!staff) return;
 
-    const tbody = document.getElementById("staffList");
     tbody.innerHTML = "";
 
     staff.forEach(s => {
@@ -122,22 +129,22 @@ async function loadStaff() {
         tr.innerHTML = `
             <td>${s.full_name}</td>
             <td>${s.username}</td>
-            <td>${s.is_active ? "Active" : "Inactive"}</td>
             <td>
-                <button onclick="deactivateStaff('${s.id}')">Deactivate</button>
-                <button onclick="activateStaff('${s.id}')">Activate</button>
-                <button onclick="deleteStaff('${s.id}')">Delete</button>
+                <span class="status-pill ${s.is_active ? "status-good" : "status-bad"}">
+                    ${s.is_active ? "Active" : "Inactive"}
+                </span>
+            </td>
+            <td>
+                ${
+                    s.is_active
+                        ? `<button class="danger" onclick="deactivateStaff('${s.id}')">Deactivate</button>`
+                        : `<button onclick="activateStaff('${s.id}')">Activate</button>`
+                }
+                <button class="subtle" onclick="deleteStaff('${s.id}')">Delete</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
-
-    staffReportSelect.innerHTML =
-        staff.filter(s => s.is_active)
-             .map(s => `<option value="${s.id}">${s.full_name}</option>`)
-             .join("");
-
-    rangeStaffSelect.innerHTML = staffReportSelect.innerHTML;
 }
 
 // ================= RANGE SBU REPORT =================
