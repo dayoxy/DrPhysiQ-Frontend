@@ -10,57 +10,39 @@ if (!token || role !== "admin") {
     window.location.href = "index.html";
 }
 
-// ================= DOM REFERENCES =================
-const adminUserEl = document.getElementById("adminUser");
+// ================= DOM HELPERS =================
+function el(id) {
+    return document.getElementById(id);
+}
 
-const saveStaffBtn = document.getElementById("saveStaffBtn");
-const loadReportBtn = document.getElementById("loadReportBtn");
-const loadStaffReportBtn = document.getElementById("loadStaffReportBtn");
-const loadRangeReportBtn = document.getElementById("loadRangeReportBtn");
-const loadStaffRangeBtn = document.getElementById("loadStaffRangeBtn");
+function setHTML(id, html) {
+    const node = el(id);
+    if (node) node.innerHTML = html;
+}
 
-const exportSBUExcelBtn = document.getElementById("exportSBUExcelBtn");
-const exportStaffExcelBtn = document.getElementById("exportStaffExcelBtn");
-const exportRangeSBUExcelBtn = document.getElementById("exportRangeSBUExcelBtn");
-const exportStaffRangeExcelBtn = document.getElementById("exportStaffRangeExcelBtn");
-
-const reportSBU = document.getElementById("reportSBU");
-const reportPeriod = document.getElementById("reportPeriod");
-const reportDate = document.getElementById("reportDate");
-const reportResult = document.getElementById("reportResult");
-
-const staffReportSelect = document.getElementById("staffReportSelect");
-const staffReportPeriod = document.getElementById("staffReportPeriod");
-const staffReportDate = document.getElementById("staffReportDate");
-const staffReportResult = document.getElementById("staffReportResult");
-
-const rangeSBU = document.getElementById("rangeSBU");
-const rangeStaffSelect = document.getElementById("rangeStaffSelect");
-const rangeStartDate = document.getElementById("rangeStartDate");
-const rangeEndDate = document.getElementById("rangeEndDate");
-const rangeReportResult = document.getElementById("rangeReportResult");
-
-if (adminUserEl) adminUserEl.innerText = `Logged in as: ${username}`;
-
-// ================= GLOBAL HELPERS =================
 function showGlobalError(msg) {
-    const banner = document.getElementById("globalError");
-    const text = document.getElementById("globalErrorText");
+    const banner = el("globalError");
+    const text = el("globalErrorText");
     if (!banner || !text) return;
     text.innerText = msg;
     banner.classList.remove("hidden");
 }
 
 function hideGlobalError() {
-    document.getElementById("globalError")?.classList.add("hidden");
+    const banner = el("globalError");
+    if (banner) banner.classList.add("hidden");
 }
 
-function setButtonLoading(btn, loading, text = "Loading...") {
-    if (!btn) return;
-    btn.disabled = loading;
-    btn.dataset.originalText ||= btn.innerText;
-    btn.innerText = loading ? text : btn.dataset.originalText;
+// ================= HEADER =================
+const adminUserEl = el("adminUser");
+if (adminUserEl) adminUserEl.innerText = `Logged in as: ${username}`;
+
+// ================= LOGOUT =================
+function logout() {
+    localStorage.clear();
+    window.location.href = "index.html";
 }
+window.logout = logout;
 
 // ================= SAFE FETCH =================
 async function safeFetch(url, options = {}) {
@@ -73,13 +55,14 @@ async function safeFetch(url, options = {}) {
             return null;
         }
         return await res.json();
-    } catch {
+    } catch (e) {
+        console.error(e);
         showGlobalError("Network error");
         return null;
     }
 }
 
-// ================= EXCEL =================
+// ================= EXCEL EXPORT =================
 function exportToExcel(filename, rows) {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -88,10 +71,8 @@ function exportToExcel(filename, rows) {
 }
 
 // ================= STATE =================
-let lastSBUReportData = null;
-let lastStaffReportData = null;
-let lastRangeSBUData = null;
-let lastStaffRangeData = null;
+let lastSBUReport = null;
+let lastRangeSBUReport = null;
 
 // ================= LOAD SBUs =================
 async function loadSBUs() {
@@ -99,50 +80,43 @@ async function loadSBUs() {
         headers: { Authorization: `Bearer ${token}` }
     });
 
-    console.log("SBUs loaded:", sbus);
+    console.log("SBUs:", sbus);
 
-    if (!sbus || !Array.isArray(sbus)) {
-        showGlobalError("Failed to load SBUs");
-        return;
-    }
+    if (!Array.isArray(sbus)) return;
 
-    const options = sbus
-        .map(s => `<option value="${s.id}">${s.name}</option>`)
-        .join("");
-
-    // 🔽 DROPDOWNS
-    document.getElementById("sbuSelect")?.innerHTML = options;
-    document.getElementById("reportSBU")?.innerHTML = options;
-    document.getElementById("rangeSBU")?.innerHTML = options;
-
-    // 🔼 TOP DASHBOARD LIST (THIS WAS MISSING)
-    const output = document.getElementById("output");
-    if (output) {
-        output.innerHTML = sbus.length
+    // Top dashboard list
+    setHTML(
+        "output",
+        sbus.length
             ? sbus.map(s => `
                 <p>
                     <strong>${s.name}</strong><br>
                     Daily Target: ₦${(s.daily_budget ?? 0).toLocaleString()}
                 </p>
             `).join("")
-            : "<p class='muted'>No SBUs found</p>";
-    }
+            : "<p class='muted'>No SBUs found</p>"
+    );
+
+    // Dropdowns
+    const options = sbus
+        .map(s => `<option value="${s.id}">${s.name}</option>`)
+        .join("");
+
+    setHTML("sbuSelect", options);
+    setHTML("reportSBU", options);
+    setHTML("rangeSBU", options);
 }
 
 // ================= LOAD STAFF =================
 async function loadStaff() {
-    const tbody = document.getElementById("staffList");
-
-    if (!tbody) {
-        console.error("staffList tbody not found");
-        return;
-    }
+    const tbody = el("staffList");
+    if (!tbody) return;
 
     const staff = await safeFetch(`${API_BASE}/admin/staff`, {
         headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!staff || !Array.isArray(staff)) return;
+    if (!Array.isArray(staff)) return;
 
     tbody.innerHTML = "";
 
@@ -159,7 +133,7 @@ async function loadStaff() {
             <td>
                 ${
                     s.is_active
-                        ? `<button class="danger" onclick="deactivateStaff('${s.id}')">Deactivate</button>`
+                        ? `<button onclick="deactivateStaff('${s.id}')">Deactivate</button>`
                         : `<button onclick="activateStaff('${s.id}')">Activate</button>`
                 }
                 <button class="subtle" onclick="deleteStaff('${s.id}')">Delete</button>
@@ -167,52 +141,106 @@ async function loadStaff() {
         `;
         tbody.appendChild(tr);
     });
-
-    // ✅ THIS WAS MISSING
-    if (staffReportSelect) {
-        const activeStaff = staff.filter(s => s.is_active);
-        staffReportSelect.innerHTML = activeStaff.length
-            ? activeStaff
-                .map(s => `<option value="${s.id}">${s.full_name}</option>`)
-                .join("")
-            : `<option disabled selected>No active staff</option>`;
-    }
 }
 
-// ================= RANGE SBU REPORT =================
+// ================= ACTIVATE / DEACTIVATE =================
+async function deactivateStaff(id) {
+    if (!confirm("Deactivate staff?")) return;
+    const ok = await safeFetch(`${API_BASE}/admin/staff/${id}/deactivate`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (ok) loadStaff();
+}
+
+async function activateStaff(id) {
+    const ok = await safeFetch(`${API_BASE}/admin/staff/${id}/activate`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (ok) loadStaff();
+}
+
+async function deleteStaff(id) {
+    if (!confirm("Delete staff permanently?")) return;
+    const ok = await safeFetch(`${API_BASE}/admin/staff/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (ok) loadStaff();
+}
+
+window.deactivateStaff = deactivateStaff;
+window.activateStaff = activateStaff;
+window.deleteStaff = deleteStaff;
+
+// ================= SBU REPORT (SINGLE DATE) =================
+async function loadSBUReport() {
+    const sbuId = el("reportSBU")?.value;
+    const period = el("reportPeriod")?.value;
+    const date = el("reportDate")?.value;
+
+    if (!sbuId || !date) {
+        showGlobalError("Select SBU and date");
+        return;
+    }
+
+    const data = await safeFetch(
+        `${API_BASE}/admin/sbu-report?sbu_id=${sbuId}&period=${period}&report_date=${date}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!data) return;
+    lastSBUReport = data;
+
+    setHTML("reportResult", `
+        <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
+        <p>Total Expenses: ₦${data.total_expenses.toLocaleString()}</p>
+        <p>Net Profit: ₦${data.net_profit.toLocaleString()}</p>
+    `);
+}
+
+// ================= SBU REPORT (DATE RANGE) =================
 async function loadRangeSBUReport() {
-    if (!rangeSBU.value || !rangeStartDate.value || !rangeEndDate.value) {
+    const sbuId = el("rangeSBU")?.value;
+    const start = el("rangeStartDate")?.value;
+    const end = el("rangeEndDate")?.value;
+
+    if (!sbuId || !start || !end) {
         showGlobalError("Select SBU and date range");
         return;
     }
 
     const data = await safeFetch(
-        `${API_BASE}/admin/sbu-report/range?sbu_id=${rangeSBU.value}&start_date=${rangeStartDate.value}&end_date=${rangeEndDate.value}`,
+        `${API_BASE}/admin/sbu-report/range?sbu_id=${sbuId}&start_date=${start}&end_date=${end}`,
         { headers: { Authorization: `Bearer ${token}` } }
     );
 
     if (!data) return;
-    lastRangeSBUData = data;
+    lastRangeSBUReport = data;
 
-    rangeReportResult.innerHTML = `
-        <p>Total Sales: ₦${data.total_sales}</p>
-        <p>Total Expenses: ₦${data.total_expenses}</p>
-        <p>Net Profit: ₦${data.net_profit}</p>
-    `;
+    setHTML("rangeReportResult", `
+        <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
+        <p>Fixed Expenses: ₦${data.fixed_expenses.toLocaleString()}</p>
+        <p>Variable Expenses: ₦${data.variable_expenses.toLocaleString()}</p>
+        <p><strong>Net Profit:</strong> ₦${data.net_profit.toLocaleString()}</p>
+    `);
 }
 
-// ================= EXPORTS =================
-if (exportRangeSBUExcelBtn) {
-    exportRangeSBUExcelBtn.onclick = () => {
-        if (!lastRangeSBUData) return showGlobalError("Load report first");
-        exportToExcel("SBU_Range_Report.xlsx", [lastRangeSBUData]);
+// ================= EXPORT =================
+const exportSBUExcelBtn = el("exportSBUExcelBtn");
+if (exportSBUExcelBtn) {
+    exportSBUExcelBtn.onclick = () => {
+        if (!lastSBUReport) return showGlobalError("Load report first");
+        exportToExcel("SBU_Report.xlsx", [lastSBUReport]);
     };
 }
 
-if (exportStaffRangeExcelBtn) {
-    exportStaffRangeExcelBtn.onclick = () => {
-        if (!lastStaffRangeData) return showGlobalError("Load staff range report first");
-        exportToExcel("Staff_Range_Report.xlsx", [lastStaffRangeData]);
+const exportRangeSBUExcelBtn = el("exportRangeSBUExcelBtn");
+if (exportRangeSBUExcelBtn) {
+    exportRangeSBUExcelBtn.onclick = () => {
+        if (!lastRangeSBUReport) return showGlobalError("Load range report first");
+        exportToExcel("SBU_Range_Report.xlsx", [lastRangeSBUReport]);
     };
 }
 
@@ -221,5 +249,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loadSBUs();
     loadStaff();
 
-    loadRangeReportBtn && (loadRangeReportBtn.onclick = loadRangeSBUReport);
+    el("loadReportBtn")?.addEventListener("click", loadSBUReport);
+    el("loadRangeReportBtn")?.addEventListener("click", loadRangeSBUReport);
 });
