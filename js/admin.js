@@ -318,6 +318,61 @@ async function createSBU() {
     loadSBUs(); // refresh list
 }
 
+async function populateRangeDropdowns() {
+    const sbus = await safeFetch(`${API_BASE}/admin/sbus`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (sbus) {
+        rangeSBU.innerHTML = sbus
+            .map(s => `<option value="${s.id}">${s.name}</option>`)
+            .join("");
+    }
+
+    const staff = await safeFetch(`${API_BASE}/admin/staff`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (staff) {
+        rangeStaffSelect.innerHTML = staff
+            .filter(s => s.is_active)
+            .map(s => `<option value="${s.id}">${s.full_name}</option>`)
+            .join("");
+    }
+}
+
+let lastRangeSBUData = null;
+
+async function loadRangeSBUReport() {
+    const sbuId = rangeSBU.value;
+    const start = rangeStartDate.value;
+    const end = rangeEndDate.value;
+
+    if (!sbuId || !start || !end) {
+        showGlobalError("Select SBU and date range");
+        return;
+    }
+
+    const data = await safeFetch(
+        `${API_BASE}/admin/sbu-report/range?sbu_id=${sbuId}&start_date=${start}&end_date=${end}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!data) return;
+
+    lastRangeSBUData = data;
+
+    rangeReportResult.innerHTML = `
+        <h4>${data.sbu.name}</h4>
+        <p>Date Range: ${data.date_range.from} → ${data.date_range.to}</p>
+        <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
+        <p>Fixed Expenses: ₦${data.fixed_expenses.toLocaleString()}</p>
+        <p>Variable Expenses: ₦${data.variable_expenses.toLocaleString()}</p>
+        <p><strong>Total Expenses:</strong> ₦${data.total_expenses.toLocaleString()}</p>
+        <p><strong>Net Profit:</strong> ₦${data.net_profit.toLocaleString()}</p>
+    `;
+}
+
 // ================= EXPORT HANDLERS =================
 exportSBUExcelBtn.onclick = () => {
     if (!lastSBUReportData) {
@@ -343,6 +398,44 @@ exportStaffExcelBtn.onclick = () => {
     );
 };
 
+exportRangeSBUExcelBtn.onclick = () => {
+    if (!lastRangeSBUData) {
+        showGlobalError("Load a range report first");
+        return;
+    }
+
+    exportToExcel("SBU_Range_Report.xlsx", [
+        {
+            SBU: lastRangeSBUData.sbu.name,
+            From: lastRangeSBUData.date_range.from,
+            To: lastRangeSBUData.date_range.to,
+            Sales: lastRangeSBUData.total_sales,
+            Fixed_Expenses: lastRangeSBUData.fixed_expenses,
+            Variable_Expenses: lastRangeSBUData.variable_expenses,
+            Net_Profit: lastRangeSBUData.net_profit
+        }
+    ]);
+};
+
+exportStaffRangeExcelBtn.onclick = () => {
+    if (!lastStaffRangeData) {
+        showGlobalError("Load staff range report first");
+        return;
+    }
+
+    exportToExcel("Staff_Range_Report.xlsx", [
+        {
+            Staff: lastStaffRangeData.staff.name,
+            From: lastStaffRangeData.date_range.from,
+            To: lastStaffRangeData.date_range.to,
+            Sales: lastStaffRangeData.total_sales,
+            Expenses: lastStaffRangeData.total_expenses,
+            Net_Profit: lastStaffRangeData.net_profit
+        }
+    ]);
+};
+
+
 // ================= PASSWORD TOGGLE =================
 toggleStaffPassword.addEventListener("change", () => {
     staff_password.type = toggleStaffPassword.checked ? "text" : "password";
@@ -356,6 +449,8 @@ document.addEventListener("DOMContentLoaded", () => {
     saveStaffBtn.onclick = createStaff;
     loadReportBtn.onclick = loadReport;
     loadStaffReportBtn.onclick = loadStaffSBUReport;
+    loadRangeReportBtn.onclick = loadRangeSBUReport;
+    loadStaffRangeBtn.onclick = loadStaffRangeReport;
 
     const createSbuBtn = document.getElementById("createSbuBtn");
     if (createSbuBtn) {
