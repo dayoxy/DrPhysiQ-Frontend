@@ -98,13 +98,25 @@ async function loadSBUs() {
     const sbus = await safeFetch(`${API_BASE}/admin/sbus`, {
         headers: { Authorization: `Bearer ${token}` }
     });
-    if (!sbus) return;
 
-    const options = sbus.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+    console.log("SBUs response:", sbus);
 
-    document.getElementById("sbuSelect").innerHTML = options;
-    reportSBU.innerHTML = options;
-    rangeSBU.innerHTML = options;
+    if (!sbus || !Array.isArray(sbus)) {
+        showGlobalError("Failed to load SBUs");
+        return;
+    }
+
+    const options = sbus
+        .map(s => `<option value="${s.id}">${s.name}</option>`)
+        .join("");
+
+    const sbuSelect = document.getElementById("sbuSelect");
+    const reportSBU = document.getElementById("reportSBU");
+    const rangeSBU = document.getElementById("rangeSBU");
+
+    if (sbuSelect) sbuSelect.innerHTML = options;
+    if (reportSBU) reportSBU.innerHTML = options;
+    if (rangeSBU) rangeSBU.innerHTML = options;
 }
 
 // ================= LOAD STAFF =================
