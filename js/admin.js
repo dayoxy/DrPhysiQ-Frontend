@@ -109,38 +109,52 @@ async function loadSBUs() {
 
 // ================= LOAD STAFF =================
 async function loadStaff() {
-    const tbody = el("staffList");
-    if (!tbody) return;
+    const tbody = document.getElementById("staffList");
+    const staffSelect = document.getElementById("staffReportSelect");
 
     const staff = await safeFetch(`${API_BASE}/admin/staff`, {
         headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!Array.isArray(staff)) return;
+    if (!staff) return;
 
-    tbody.innerHTML = "";
+    // ===== STAFF TABLE =====
+    if (tbody) {
+        tbody.innerHTML = "";
 
-    staff.forEach(s => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${s.full_name}</td>
-            <td>${s.username}</td>
-            <td>
-                <span class="status-pill ${s.is_active ? "status-good" : "status-bad"}">
-                    ${s.is_active ? "Active" : "Inactive"}
-                </span>
-            </td>
-            <td>
-                ${
-                    s.is_active
-                        ? `<button onclick="deactivateStaff('${s.id}')">Deactivate</button>`
-                        : `<button onclick="activateStaff('${s.id}')">Activate</button>`
-                }
-                <button class="subtle" onclick="deleteStaff('${s.id}')">Delete</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
+        staff.forEach(s => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${s.full_name}</td>
+                <td>${s.username}</td>
+                <td>
+                    <span class="status-pill ${s.is_active ? "status-good" : "status-bad"}">
+                        ${s.is_active ? "Active" : "Inactive"}
+                    </span>
+                </td>
+                <td>
+                    ${
+                        s.is_active
+                            ? `<button class="danger" onclick="deactivateStaff('${s.id}')">Deactivate</button>`
+                            : `<button onclick="activateStaff('${s.id}')">Activate</button>`
+                    }
+                    <button class="subtle" onclick="deleteStaff('${s.id}')">Delete</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ===== STAFF REPORT DROPDOWN =====
+    if (staffSelect) {
+        const activeStaff = staff.filter(s => s.is_active);
+
+        staffSelect.innerHTML = activeStaff.length
+            ? activeStaff
+                .map(s => `<option value="${s.id}">${s.full_name}</option>`)
+                .join("")
+            : `<option disabled selected>No active staff</option>`;
+    }
 }
 
 // ================= ACTIVATE / DEACTIVATE =================
