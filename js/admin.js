@@ -227,22 +227,35 @@ async function loadRangeSBUReport() {
     `);
 }
 
-async function loadStaffForReports() {
-    const staff = await safeFetch(`${API_BASE}/admin/staff`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+async function loadStaffSBUReport() {
+    if (!staffReportSelect.value || !staffReportDate.value) {
+        showGlobalError("Select staff and date");
+        return;
+    }
 
-    if (!Array.isArray(staff)) return;
+    const staffId = staffReportSelect.value;
+    const period = staffReportPeriod.value;
+    const date = staffReportDate.value;
 
-    const activeStaff = staff.filter(s => s.is_active);
+    setButtonLoading(loadStaffReportBtn, true);
 
-    const options = activeStaff.length
-        ? activeStaff.map(s =>
-            `<option value="${s.id}">${s.full_name}</option>`
-          ).join("")
-        : `<option disabled>No active staff</option>`;
+    const data = await safeFetch(
+        `${API_BASE}/admin/staff/${staffId}/sbu-report?period=${period}&report_date=${date}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-    setHTML("staffReportSelect", options);
+    setButtonLoading(loadStaffReportBtn, false);
+    if (!data) return;
+
+    lastStaffReportData = data;
+
+    staffReportResult.innerHTML = `
+        <h4>${data.staff.name} — ${data.sbu.name}</h4>
+        <p>Total Sales: ₦${data.total_sales.toLocaleString()}</p>
+        <p>Total Expenses: ₦${data.total_expenses.toLocaleString()}</p>
+        <p><strong>Net Profit:</strong> ₦${data.net_profit.toLocaleString()}</p>
+        <p>Performance: ${data.performance_percent}%</p>
+    `;
 }
 
 
