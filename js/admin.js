@@ -294,8 +294,7 @@ if (exportRangeSBUExcelBtn) {
 document.addEventListener("DOMContentLoaded", () => {
     loadSBUs();
     loadStaff();
-    loadStaffForReports();
-
+   
     el("loadReportBtn")?.addEventListener("click", loadSBUReport);
     el("loadRangeReportBtn")?.addEventListener("click", loadRangeSBUReport);
     el("loadStaffReportBtn")?.addEventListener("click", loadStaffSBUReport);
