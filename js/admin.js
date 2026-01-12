@@ -99,7 +99,7 @@ async function loadSBUs() {
         headers: { Authorization: `Bearer ${token}` }
     });
 
-    console.log("SBUs response:", sbus);
+    console.log("SBUs loaded:", sbus);
 
     if (!sbus || !Array.isArray(sbus)) {
         showGlobalError("Failed to load SBUs");
@@ -110,13 +110,23 @@ async function loadSBUs() {
         .map(s => `<option value="${s.id}">${s.name}</option>`)
         .join("");
 
-    const sbuSelect = document.getElementById("sbuSelect");
-    const reportSBU = document.getElementById("reportSBU");
-    const rangeSBU = document.getElementById("rangeSBU");
+    // 🔽 DROPDOWNS
+    document.getElementById("sbuSelect")?.innerHTML = options;
+    document.getElementById("reportSBU")?.innerHTML = options;
+    document.getElementById("rangeSBU")?.innerHTML = options;
 
-    if (sbuSelect) sbuSelect.innerHTML = options;
-    if (reportSBU) reportSBU.innerHTML = options;
-    if (rangeSBU) rangeSBU.innerHTML = options;
+    // 🔼 TOP DASHBOARD LIST (THIS WAS MISSING)
+    const output = document.getElementById("output");
+    if (output) {
+        output.innerHTML = sbus.length
+            ? sbus.map(s => `
+                <p>
+                    <strong>${s.name}</strong><br>
+                    Daily Target: ₦${(s.daily_budget ?? 0).toLocaleString()}
+                </p>
+            `).join("")
+            : "<p class='muted'>No SBUs found</p>";
+    }
 }
 
 // ================= LOAD STAFF =================
@@ -132,7 +142,7 @@ async function loadStaff() {
         headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!staff) return;
+    if (!staff || !Array.isArray(staff)) return;
 
     tbody.innerHTML = "";
 
@@ -157,6 +167,16 @@ async function loadStaff() {
         `;
         tbody.appendChild(tr);
     });
+
+    // ✅ THIS WAS MISSING
+    if (staffReportSelect) {
+        const activeStaff = staff.filter(s => s.is_active);
+        staffReportSelect.innerHTML = activeStaff.length
+            ? activeStaff
+                .map(s => `<option value="${s.id}">${s.full_name}</option>`)
+                .join("")
+            : `<option disabled selected>No active staff</option>`;
+    }
 }
 
 // ================= RANGE SBU REPORT =================
