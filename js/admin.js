@@ -227,6 +227,25 @@ async function loadRangeSBUReport() {
     `);
 }
 
+async function loadStaffForReports() {
+    const staff = await safeFetch(`${API_BASE}/admin/staff`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!Array.isArray(staff)) return;
+
+    const activeStaff = staff.filter(s => s.is_active);
+
+    const options = activeStaff.length
+        ? activeStaff.map(s =>
+            `<option value="${s.id}">${s.full_name}</option>`
+          ).join("")
+        : `<option disabled>No active staff</option>`;
+
+    setHTML("staffReportSelect", options);
+}
+
+
 // ================= EXPORT =================
 const exportSBUExcelBtn = el("exportSBUExcelBtn");
 if (exportSBUExcelBtn) {
@@ -248,7 +267,9 @@ if (exportRangeSBUExcelBtn) {
 document.addEventListener("DOMContentLoaded", () => {
     loadSBUs();
     loadStaff();
+    loadStaffForReports();
 
     el("loadReportBtn")?.addEventListener("click", loadSBUReport);
     el("loadRangeReportBtn")?.addEventListener("click", loadRangeSBUReport);
+    el("loadStaffReportBtn")?.addEventListener("click", loadStaffSBUReport);
 });
