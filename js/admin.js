@@ -277,6 +277,47 @@ async function deleteStaff(id) {
 }
 
 window.deleteStaff = deleteStaff;
+
+async function createSBU() {
+    const name = document.getElementById("sbuName").value;
+    const department = document.getElementById("sbuDepartment").value;
+    const daily_budget = Number(
+        document.getElementById("sbuDailyTarget").value
+    );
+    const description =
+        document.getElementById("sbuDescription")?.value || "";
+
+    if (!name || !department || !daily_budget) {
+        showGlobalError("Fill all required SBU fields");
+        return;
+    }
+
+    const ok = await apiFetch(`${API_BASE}/admin/create-sbu`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify({
+            name,
+            department,
+            daily_budget,
+            description
+        })
+    });
+
+    if (!ok) return;
+
+    alert("SBU created successfully");
+
+    document.getElementById("sbuName").value = "";
+    document.getElementById("sbuDepartment").value = "";
+    document.getElementById("sbuDailyTarget").value = "";
+    document.getElementById("sbuDescription").value = "";
+
+    loadSBUs(); // refresh list
+}
+
 // ================= EXPORT HANDLERS =================
 exportSBUExcelBtn.onclick = () => {
     if (!lastSBUReportData) {
@@ -315,4 +356,9 @@ document.addEventListener("DOMContentLoaded", () => {
     saveStaffBtn.onclick = createStaff;
     loadReportBtn.onclick = loadReport;
     loadStaffReportBtn.onclick = loadStaffSBUReport;
+
+    const createSbuBtn = document.getElementById("createSbuBtn");
+    if (createSbuBtn) {
+        createSbuBtn.onclick = createSBU;
+    }
 });
