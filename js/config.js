@@ -1,1 +1,1 @@
-const API_BASE = "https://drphysiq-inventory-production.up.railway.app";
+const API_BASE = "https://YOUR-RAILWAY-URL.up.railway.app";

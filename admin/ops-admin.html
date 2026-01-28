@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ops Admin – DrPhysiQ</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+<header class="app-header">
+    <h2>Operations Admin</h2>
+    <div>
+        <span id="adminUser"></span>
+        <button onclick="logout()">Logout</button>
+    </div>
+</header>
+
+<main class="main">
+
+<section class="panel">
+    <h3>Create SBU</h3>
+    <input id="sbuName" placeholder="Name">
+    <input id="sbuDepartment" placeholder="Department">
+    <input id="sbuDailyTarget" type="number" placeholder="Daily Target">
+    <input id="personnelCost" type="number" placeholder="Personnel Cost">
+    <input id="rentCost" type="number" placeholder="Rent">
+    <input id="electricityCost" type="number" placeholder="Electricity">
+    <button id="createSbuBtn">Create SBU</button>
+</section>
+
+<section class="panel">
+    <h3>Staff Management</h3>
+    <table>
+        <thead>
+            <tr><th>Name</th><th>Status</th><th>Action</th></tr>
+        </thead>
+        <tbody id="staffList"></tbody>
+    </table>
+</section>
+
+<section class="panel">
+    <h3>SBU Reports</h3>
+    <select id="reportSBU"></select>
+    <input type="date" id="reportDate">
+    <button id="loadReportBtn">Load</button>
+    <div id="reportResult"></div>
+</section>
+
+</main>
+
+<script src="../js/config.js"></script>
+<script src="../js/ui.js"></script>
+<script type="module" src="ops-admin.js"></script>
+</body>
+</html>

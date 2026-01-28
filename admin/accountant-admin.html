@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Accountant – DrPhysiQ</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+<header class="app-header">
+    <h2>Accountant Dashboard</h2>
+    <div>
+        <span id="adminUser"></span>
+        <button onclick="logout()">Logout</button>
+    </div>
+</header>
+
+<main class="main">
+<section class="panel">
+    <h3>SBU Performance</h3>
+    <select id="reportSBU"></select>
+    <input type="date" id="reportDate">
+    <button id="loadReportBtn">Load</button>
+    <div id="reportResult"></div>
+</section>
+</main>
+
+<script src="../js/config.js"></script>
+<script src="../js/ui.js"></script>
+<script type="module" src="accountant-admin.js"></script>
+</body>
+</html>
