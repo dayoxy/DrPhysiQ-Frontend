@@ -31,16 +31,17 @@ if (loginForm) {
             return;
         }
 
-        // ✅ ROLE-BASED REDIRECT
+        // ✅ ROLE-BASED REDIRECT (GitHub Pages-safe)
         if (data.role === "ops_admin" || data.role === "super_admin") {
-            window.location.href = "admin/ops-admin.html";
+            window.location.href = "DrPhysiQ-Frontend/admin/ops-admin.html";
         } else if (data.role === "accountant_admin") {
-            window.location.href = "admin/accountant-admin.html";
+            window.location.href = "DrPhysiQ-Frontend/admin/accountant-admin.html";
         } else if (data.role === "staff") {
-            window.location.href = "staff.html";
+            window.location.href = "DrPhysiQ-Frontend/staff.html";
         } else {
             showGlobalError("Unknown role");
         }
+
     });
 }
 
