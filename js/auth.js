@@ -19,24 +19,29 @@ if (loginForm) {
         }
 
         const data = await res.json();
-
+        
+        // Save auth data
         localStorage.setItem("token", data.access_token);
         localStorage.setItem("role", data.role);
         localStorage.setItem("username", data.username);
+        localStorage.setItem("must_change_password", data.must_change_password);
 
-        localStorage.setItem(
-            "must_change_password",
-            data.must_change_password
-        );
-
-        // ✅ Correct redirects
-        if (data.role === "admin") {
-            window.location.href = "admin.html";
-        } else {
+        // 🔐 Force password change first (ALL ROLES)
+        if (data.must_change_password) {
             window.location.href = "staff.html";
+            return;
         }
-    });
-}
+
+        // ✅ ROLE-BASED ROUTING
+        if (data.role === "ops_admin" || data.role === "super_admin") {
+            window.location.href = "admin/ops-admin.html";
+        } else if (data.role === "accountant_admin") {
+            window.location.href = "admin/accountant-admin.html";
+        } else if (data.role === "staff") {
+            window.location.href = "staff.html";
+        } else {
+            showGlobalError("Unknown role. Contact admin.");
+        }
 
 function showGlobalError(message) {
     const banner = document.getElementById("globalError");
